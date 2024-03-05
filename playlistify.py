@@ -123,6 +123,7 @@ class SpotifyAnalyzer:
                 'image_url': playlist_data['images'][0]['url'] if playlist_data['images'] else None,
                 'song_title' : track['track']['name'],
                 'artists' : ', '.join([artist['name'] for artist in track['track']['artists']]),
+                'artist_uris' : ', '.join([artist['uri'] for artist in track['track']['artists']]),
                 'popularity' : track['track']['popularity'],
                 'uri' : track['track']['uri']
             }
@@ -133,8 +134,20 @@ class SpotifyAnalyzer:
         songinfo = []
         for index, row in df.iterrows():
             song_uri = row['uri'].split(':')[-1]
+            artists = row['artist_uris'].split(', ')
+
+            # Get genres for each artist in song
+            genres = []
+            for artist in artists:
+                artist_uri = artist.split(':')[-1]
+                genre_response = requests.get(f'https://api.spotify.com/v1/artists/{artist_uri}', headers=headers)
+                if genre_response.status_code == 200:
+                    genre_data = genre_response.json()
+                    genres.extend(genre_data['genres'])
+
             song_response = requests.get(f'https://api.spotify.com/v1/audio-features/{song_uri}', headers=headers)
-            if song_response.status_code == 200:
+
+            if song_response.status_code == 200 and genre_response.status_code == 200:
                 song_data_json = song_response.json()
                 song_data = {
                     'song_title': row['song_title'],
@@ -153,8 +166,11 @@ class SpotifyAnalyzer:
                     'valence': song_data_json['valence'],
                     'tempo': song_data_json['tempo'],
                     'duration_ms': song_data_json['duration_ms'],
-                    'time_signature': song_data_json['time_signature']
+                    'time_signature': song_data_json['time_signature'],
+                    'genres': genres
                 }
+                genre_data = genre_response.json()
+
                 songinfo.append(song_data)
             else:
                 print(f"Error: {song_response.status_code}")
