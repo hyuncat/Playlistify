@@ -112,7 +112,6 @@ class SpotifyAnalyzer:
             popularity = track['track']['popularity']
             return song_title, artists, uri, popularity
 
-        df = pd.DataFrame()
         playinfo = []
         for track in playlist_data['tracks']['items']:
             # song_title, artists, uri, popularity = extract_track_info(track)
@@ -128,10 +127,42 @@ class SpotifyAnalyzer:
                 'uri' : track['track']['uri']
             }
             playinfo.append(playlist_info)
-
-        df = pd.DataFrame(playinfo)
         
-        return df
+        df = pd.DataFrame(playinfo)
+
+        songinfo = []
+        for index, row in df.iterrows():
+            song_uri = row['uri'].split(':')[-1]
+            song_response = requests.get(f'https://api.spotify.com/v1/audio-features/{song_uri}', headers=headers)
+            if song_response.status_code == 200:
+                song_data_json = song_response.json()
+                song_data = {
+                    'song_title': row['song_title'],
+                    'song_id': song_data_json['id'],
+                    'artists' : row['artists'],
+                    'popularity' : row['popularity'],
+                    'danceability': song_data_json['danceability'],
+                    'energy': song_data_json['energy'],
+                    'key': song_data_json['key'],
+                    'loudness': song_data_json['loudness'],
+                    'mode': song_data_json['mode'],
+                    'speechiness': song_data_json['speechiness'],
+                    'acousticness': song_data_json['acousticness'],
+                    'instrumentalness': song_data_json['instrumentalness'],
+                    'liveness': song_data_json['liveness'],
+                    'valence': song_data_json['valence'],
+                    'tempo': song_data_json['tempo'],
+                    'duration_ms': song_data_json['duration_ms'],
+                    'time_signature': song_data_json['time_signature']
+                }
+                songinfo.append(song_data)
+            else:
+                print(f"Error: {song_response.status_code}")
+                return None
+        
+        songdf = pd.DataFrame(songinfo)
+        # Return playlist details, list of song detail dataframes, list of song titles
+        return df, songdf, playlist_data['name']
 
 
 def main():
@@ -155,9 +186,9 @@ def main():
     sp = SpotifyAnalyzer(username, redirect_uri)
     # sp.get_top_artists()
     # sp.get_genre_seeds()
-    df = sp.get_playlist_details('https://open.spotify.com/playlist/1W7ZTOHtVIcA3Js5sEzNZV?si=302c6798a03d4b07')
-    df.to_csv('myplaylist.csv', index=False)
-
+    df, songdf, playlist_name = sp.get_playlist_details('https://open.spotify.com/playlist/1W7ZTOHtVIcA3Js5sEzNZV?si=302c6798a03d4b07')
+    df.to_csv(f'data/{playlist_name}.csv', index=False)
+    songdf.to_csv(f'data/{playlist_name}_songs.csv', index=False)
 
 if __name__ == "__main__":
     main()
