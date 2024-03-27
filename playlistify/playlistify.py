@@ -11,23 +11,28 @@ from spotifysecrets import *
 
 
 class SpotifyAnalyzer:
-    # create SpotifyAnalyzer instance
     def __init__(self, username, redirect_uri='http://localhost:8888/callback', scope=["playlist-read-private"]):
-        
+        """
+        Create a SpotifyAnalyzer instance with the specified username, redirect_uri, and scope.
+        """
         self.token = None
         self.sp = None
         self.username = username
         self.scope = scope
         self.redirect_uri = redirect_uri
-        self.generate_token()
+        self.token = self.generate_token()
+        self.headers = {
+            'Authorization': 'Bearer ' + self.token
+        }
         
-    # set/modify scope
     def set_scope(self, scope):
+        """Set/modify permissions for the SpotifyAnalyzer instance."""
         self.scope = scope
         self.generate_token()
         
     
     def generate_token(self):
+        """Generate a Spotify API token for the user."""
         token = util.prompt_for_user_token(
             self.username, 
             self.scope, 
@@ -37,13 +42,13 @@ class SpotifyAnalyzer:
         )
         if token:
             self.sp = spotipy.Spotify(auth=token)
-            self.token = token
+            return token
         else:
             print(f"Cant get token for {self.username}")
 
         
-    # Print top artists
     def get_top_artists(self):
+        """Get the user's top artists and print them to the console."""
         # Get request for top artists
         headers = {
             'Authorization': 'Bearer ' + self.token
@@ -63,7 +68,6 @@ class SpotifyAnalyzer:
         data_str  = json.dumps(data, indent=2)
         data_dict = json.loads(data_str)
 
-
         top_artists = data['items']
 
         for artist in top_artists:
@@ -72,8 +76,8 @@ class SpotifyAnalyzer:
 
         return
     
-    # Print available genre seeds
     def get_genre_seeds(self):
+        """Print available genre seeds to the console."""
         headers = {
             'Authorization': 'Bearer ' + self.token
         }
@@ -87,16 +91,25 @@ class SpotifyAnalyzer:
         data2_str = json.dumps(data2, indent=2)
         print(data2_str)
 
-    # Get playlist details
     def get_playlist_details(self, playlist_link):
-        # get playlist ID from the provided link
+        """
+        Get playlist and song details from a Spotify playlist link.
+        Returns: A pandas dataframe including:
+            - playlist_id
+            - title
+            - description
+            - image_url
+            - song_title
+            - artists
+            - artist_uris
+            - popularity
+            - uri
+        """
+        # Get playlist ID from the provided link
         playlist_id = playlist_link.split('/')[-1]
 
-        # get playlist details using the Spotify Web API
-        headers = {
-            'Authorization': 'Bearer ' + self.token
-        }
-        response = requests.get(f'https://api.spotify.com/v1/playlists/{playlist_id}', headers=headers)
+        # Get playlist details using the Spotify Web API
+        response = requests.get(f'https://api.spotify.com/v1/playlists/{playlist_id}', headers=self.headers)
 
         if response.status_code == 200:
             playlist_data = response.json()
@@ -140,12 +153,12 @@ class SpotifyAnalyzer:
             genres = []
             for artist in artists:
                 artist_uri = artist.split(':')[-1]
-                genre_response = requests.get(f'https://api.spotify.com/v1/artists/{artist_uri}', headers=headers)
+                genre_response = requests.get(f'https://api.spotify.com/v1/artists/{artist_uri}', headers=self.headers)
                 if genre_response.status_code == 200:
                     genre_data = genre_response.json()
                     genres.extend(genre_data['genres'])
 
-            song_response = requests.get(f'https://api.spotify.com/v1/audio-features/{song_uri}', headers=headers)
+            song_response = requests.get(f'https://api.spotify.com/v1/audio-features/{song_uri}', headers=self.headers)
 
             if song_response.status_code == 200 and genre_response.status_code == 200:
                 song_data_json = song_response.json()
@@ -407,7 +420,8 @@ def main():
     # playsql.to_csv('data/playlists_SQL.csv', index=False)
 
     artsql = sp.create_artist_sql(playlist_links[2])
-    artsql.to_csv('data/artists_SQL.csv', index=False)
+    print(artsql)
+    #artsql.to_csv('data/artists_SQL.csv', index=False)
 
 if __name__ == "__main__":
     main()
