@@ -13,10 +13,10 @@ import spotipy
 import spotipy.util as util
 
 
-DEFAULT_USERNAME = 'nrkjbdqb3gwxlzypjce5vvqra'
+DEFAULT_USERNAME = os.getenv('DEFAULT_SPOTIFY_USERNAME')
 CLIENT_ID = os.getenv('CLIENT_ID')
 CLIENT_SECRET = os.getenv('CLIENT_SECRET')
-REDIRECT_URI = 'http://127.0.0.1:5000/callback'
+REDIRECT_URI = os.getenv('REDIRECT_URI')
 
 AUTH_URL = 'https://accounts.spotify.com/authorize'
 TOKEN_URL = 'https://accounts.spotify.com/api/token'
@@ -24,24 +24,27 @@ API_BASE_URL = 'https://api.spotify.com/v1/'
 
 
 class SpotifyAnalyzer:
-    def __init__(self, username=DEFAULT_USERNAME, redirect_uri=REDIRECT_URI, scope=["playlist-read-private"]):
+    def __init__(self, username=DEFAULT_USERNAME, redirect_uri=REDIRECT_URI, token=None):
         """
         Create a SpotifyAnalyzer instance with the specified username, redirect_uri, and scope.
         """
-        self.token = None
+        self.token = token
         self.sp = None
         self.username = username
-        self.scope = scope
         self.redirect_uri = redirect_uri
-        self.token = self.generate_token()
+        print(self.redirect_uri)
+        self.set_scope()
+
+        if self.token is None:
+            self.token = self.generate_token()
+        
         self.headers = {
             'Authorization': 'Bearer ' + self.token
         }
         
-    def set_scope(self, scope):
+    def set_scope(self, scope=["playlist-read-private"]):
         """Set/modify permissions for the SpotifyAnalyzer instance."""
         self.scope = scope
-        self.generate_token()
         
     
     def generate_token(self):
@@ -67,10 +70,10 @@ class SpotifyAnalyzer:
         print(json.dumps(playlist, indent=4))
 
 
-
     def get_playlist_details(self, playlist_link):
         """
         Get playlist and song details from a Spotify playlist link.
+        (Doesn't use Spotipy library)
         @param:
             - playlist_link: Spotify playlist link
         @return:

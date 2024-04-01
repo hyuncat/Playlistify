@@ -6,18 +6,18 @@ import requests
 import pandas as pd
 import os
 
-# Create main_blueprint as a Blueprint object
+# Login blueprint
 login = Blueprint('login', __name__)
 
 CLIENT_ID = os.getenv('CLIENT_ID')
 CLIENT_SECRET = os.getenv('CLIENT_SECRET')
-REDIRECT_URI = 'http://127.0.0.1:5000/callback'
+REDIRECT_URI = os.getenv('REDIRECT_URI')
 
 AUTH_URL = 'https://accounts.spotify.com/authorize'
 TOKEN_URL = 'https://accounts.spotify.com/api/token'
 API_BASE_URL = 'https://api.spotify.com/v1/'
 
-# a simple page that says hello
+
 @login.route('/login')
 def user_login():
     scope = 'playlist-read-private'
@@ -30,7 +30,6 @@ def user_login():
     }
 
     auth_url = f"{AUTH_URL}?{urllib.parse.urlencode(params)}"
-
     return redirect(auth_url)
 
 @login.route('/callback')

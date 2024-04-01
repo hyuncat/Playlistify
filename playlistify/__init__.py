@@ -17,9 +17,9 @@ from .login import login as lg
 #     DATABASEURI = "postgresql://zy2431:123123@34.73.36.248/project1"
 #
 
-DB_USERNAME = os.getenv('DB_USER')
-DB_PASSWORD = os.getenv('DB_PASSWORD')
-DB_HOST = "35.212.75.104"
+DB_USERNAME = os.getenv('DATABASE_USERNAME')
+DB_PASSWORD = os.getenv('DATABASE_PASSWORD')
+DB_HOST = os.getenv('DATABASE_HOST')
 DATABASE_URI = f"postgresql://{DB_USERNAME}:{DB_USERNAME}@{DB_HOST}/proj1part2"
 
 # Create a database engine that knows how to connect to the URI above.
