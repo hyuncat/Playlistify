@@ -27,10 +27,11 @@ def home():
 
 @main.route('/redirect-playlist', methods=['POST'])
 def redirect_playlist():
-    playlist_link = request.form['playlist_link']
-    playlist_id = extract_playlist_id(playlist_link)
-    session['playlist_id'] = playlist_id
-    return redirect(url_for('main.auth'))
+    if request.method == 'POST':
+        playlist_link = request.form['playlist_link']
+        playlist_id = extract_playlist_id(playlist_link)
+        session['playlist_id'] = playlist_id
+        return redirect(url_for('main.auth'))
 
 @main.route('/auth')
 def auth():

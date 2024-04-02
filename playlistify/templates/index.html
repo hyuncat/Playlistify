@@ -6,7 +6,7 @@
     <h1>Upload playlist link</h1>
   </div>
   <div class="row">
-    <form class="row g-3" method="POST" action="{{ url_for('main.auth') }}">
+    <form class="row g-3" method="POST" action="{{ url_for('main.redirect_playlist') }}">
       <div class="col-12">
         <input type="text" name="playlist_link" placeholder="Paste link here..." required>
       </div>
@@ -15,4 +15,8 @@
     </form>
   </div>
 </div>
+
+<!-- Script used to delay redirecting the user to the Spotify login page -->
+<script src="{{ url_for('static', filename='auth.js') }}"></script>
+
 {% endblock %}

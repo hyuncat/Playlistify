@@ -80,7 +80,7 @@ def refresh_token():
         session['user_access_token'] = new_response_data['access_token']
         session['expires_at'] = datetime.now().timestamp() + new_response_data['expires_in']
 
-    return redirect(url_for('login.profile'))
+    return redirect(url_for('login.user_profile'))
 
 
 @login.route('/user_playlists')
