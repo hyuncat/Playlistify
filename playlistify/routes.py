@@ -92,10 +92,14 @@ def playlist():
 
             with my_engine.connect() as conn:
                 # Insert or update user
-                insert_playlist = text("INSERT INTO playlist (playlist_id, title) VALUES (:id, :title) ON CONFLICT (id) DO NOTHING")
+                insert_playlist = text("""INSERT INTO playlist (playlist_id, title, image_url, description) 
+                                       VALUES (:id, :title, :image_url, :description) 
+                                       ON CONFLICT (id) DO NOTHING""")
                 params = {
                     'id': playlist_data['playlist_id'],
-                    'title': playlist_data['name']
+                    'title': playlist_data['name'],
+                    'image_url': playlist_data['image_url'],
+                    'description': playlist_data['description']
                 }
                 conn.execute(insert_playlist, params)
                 conn.commit()
