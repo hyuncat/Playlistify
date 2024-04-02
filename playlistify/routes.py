@@ -1,12 +1,14 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, abort
+from flask import Blueprint, render_template, g, request, redirect, url_for, session, jsonify, abort
 import pandas as pd
 import os, json
 import pickle, zlib
 import requests
 import base64
 from datetime import datetime
+from sqlalchemy import text
 
 from playlistify.SpotifyAnalyzer import SpotifyAnalyzer, extract_playlist_id
+from .db_config import my_engine
 
 # Client info
 CLIENT_ID = os.getenv('CLIENT_ID')
@@ -85,6 +87,21 @@ def playlist():
     if 'playlist_data' in session:
         playlist_data = session['playlist_data']
         song_data = pickle.loads(zlib.decompress(session['song_panda']))
+
+        if request.method == 'POST':
+
+            with my_engine.connect() as conn:
+                # Insert or update user
+                insert_playlist = text("INSERT INTO playlist (playlist_id, title) VALUES (:id, :title) ON CONFLICT (id) DO NOTHING")
+                params = {
+                    'id': playlist_data['playlist_id'],
+                    'title': playlist_data['name']
+                }
+                conn.execute(insert_playlist, params)
+                conn.commit()
+                print(f'inserted playlist: {playlist_data["name"]}!')
+
+
         return render_template('playlist.html', playlist_data=playlist_data, song_data=song_data)
     else:
         return redirect(url_for('main.home'))

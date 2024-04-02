@@ -1,11 +1,12 @@
 
 import os
-from sqlalchemy import *
+from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, render_template, g, redirect, Response
 from flask_session import Session
 import psycopg2
 
+from .db_config import my_engine
 from .routes import main
 from .login import login as lg
 
@@ -23,7 +24,7 @@ DB_HOST = os.getenv('DATABASE_HOST')
 DATABASE_URI = f"postgresql://{DB_USERNAME}:{DB_USERNAME}@{DB_HOST}/proj1part2"
 
 # Create a database engine that knows how to connect to the URI above.
-engine = create_engine(DATABASE_URI)
+my_engine = create_engine(DATABASE_URI)
 
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_mapping(
@@ -49,24 +50,18 @@ try:
 except OSError:
     pass
 
-# Function to establish a database connection
-def get_db():
-    if 'db' not in g:
-        g.db = psycopg2.connect(
-            dbname=app.config['DATABASE'],
-            user=app.config['DB_USER'],
-            password=app.config['DB_PASSWORD'],
-            host=app.config['DB_HOST'],
-            port=app.config['DB_PORT']
-        )
-    return g.db
+# # Register database engine
+# @app.before_request
+# def before_request():
+#     g.my_engine = my_engine
 
-# Function to close the database connection
-@app.teardown_appcontext
-def close_db(error):
-    if 'db' in g:
-        g.db.close()
-
+# # Register the database teardown
+# @app.teardown_appcontext
+# def teardown_db(error):
+#     try:
+#         g.conn.close()
+#     except Exception as e:
+#         pass
 
 # Register Blueprints
 app.register_blueprint(main)
