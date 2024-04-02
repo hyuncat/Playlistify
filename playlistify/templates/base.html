@@ -15,15 +15,22 @@
           </button>
           <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
             <div class="navbar-nav">
-              <a class="nav-link active" aria-current="page" href="/">Analyze</a>
+              <a class="nav-link active" aria-current="page" href="{% if 'user_access_token' in session %}/user_playlists{% else %}/{% endif %}">Analyze</a>
               <a class="nav-link" href="#">Top Playlists</a>
+            </div> 
+            <div class="navbar-nav ms-auto">
               <a class="nav-link" href="#">Search</a>
-              <a class="nav-link" href="/login">Login</a>
+              <a class="nav-link" href="{% if 'user_access_token' not in session %}/login{% else %}/user_profile{% endif %}">{% if 'user_access_token' not in session %}Login{% else %}Profile{% endif %}</a>
             </div>
           </div>
         </div>
       </nav>
     {% block content %}{% endblock %}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script>
+      fetch('/auth')
+          .then(response => response.json())
+          .then(data => setTimeout(() => window.location.href = data.redirect, 1000));
+  </script>
 </body>
 </html>

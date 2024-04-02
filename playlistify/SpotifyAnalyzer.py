@@ -5,6 +5,7 @@ Author: Sarah Hong
 
 import json
 import os
+import re
 
 import requests
 import pandas as pd
@@ -62,15 +63,49 @@ class SpotifyAnalyzer:
         else:
             print(f"Cant get token for {self.username}")
 
-    def get_spotipy_playlist(self, playlist_link):
-        # Get playlist ID from the provided link
-        playlist_id = playlist_link.split('/')[-1]
+    def get_user_playlists(self):
+        """Get the user's playlists."""
+        response = requests.get(f'{API_BASE_URL}me/playlists', headers=self.headers)
+        if response.status_code != 200:
+            print(f"Error: {response.status_code}")
+            return None
+        
+        user_playlists_response = response.json()
+        playlist_panda = []
+        for playlist in user_playlists_response['items']:
+            if playlist['owner']['id'] != self.username:
+                continue
+            panda_row = {
+                'playlist_id': playlist['id'],
+                'image_url': playlist['images'][0]['url'] if playlist['images'] else None,
+                'name': playlist['name'],
+                'description': playlist['description'],
+                'owner': playlist['owner']['display_name'],
+                'tracks': playlist['tracks']['total'],
+                'playlist_uri': playlist['uri']
+            }
+            playlist_panda.append(panda_row)
+        
+        return pd.DataFrame(playlist_panda)
 
-        playlist = self.sp.playlist(playlist_id)
-        print(json.dumps(playlist, indent=4))
+    def get_user_info(self):
+        """Get the user's Spotify account information."""
+        response = requests.get(f'{API_BASE_URL}me', headers=self.headers)
+        if response.status_code != 200:
+            print(f"Error: {response.status_code}")
+            return None
+    
+        user_info = response.json()
+        user_info_dict = {
+            'display_name': user_info['display_name'],
+            'user_id': user_info['id'],
+            'image_url': user_info['images'][0]['url'] if user_info['images'] else None,
+            'user_uri': user_info['uri']
+        }
+        return user_info_dict
 
 
-    def get_playlist_details(self, playlist_link):
+    def get_playlist_details(self, playlist_id):
         """
         Get playlist and song details from a Spotify playlist link.
         (Doesn't use Spotipy library)
@@ -105,7 +140,7 @@ class SpotifyAnalyzer:
                 - genres
         """
         # Get playlist ID from the provided link
-        playlist_id = playlist_link.split('/')[-1]
+        # playlist_id = playlist_link.split('/')[-1]
 
         # Get playlist details using the Spotify Web API
         response = requests.get(f'https://api.spotify.com/v1/playlists/{playlist_id}', headers=self.headers)
@@ -177,13 +212,32 @@ class SpotifyAnalyzer:
         song_panda = pd.DataFrame(song_df)
         return playlist_info, song_panda
     
+
+def extract_playlist_id(url):
+    """
+    Define a regular expression pattern to capture the playlist ID
+    Pattern looks for 'playlist/' followed by any characters except '?',
+    capturing those characters until it encounters '?si=
+    """
+    pattern = r"playlist/([^?]+)\?si="
+    match = re.search(pattern, url)
+    
+    if match:
+        return match.group(1)
+    else:
+        return None
+
+
 if __name__ == '__main__':
     username = 'nrkjbdqb3gwxlzypjce5vvqra'
     redirect_uri = 'http://localhost:3000/callback'
     playlistify = SpotifyAnalyzer(username, redirect_uri)
 
-    playlist_info, song_panda = playlistify.get_playlist_details('https://open.spotify.com/playlist/6B68YiiaqNNQRQpNuDgPJA?si=b3ec1829ef1645c8')
-    print(playlist_info)
-    song_panda.to_csv('smule_panda.csv', index=False)
+    # playlist_info, song_panda = playlistify.get_playlist_details('https://open.spotify.com/playlist/6B68YiiaqNNQRQpNuDgPJA?si=b3ec1829ef1645c8')
+    # print(playlist_info)
+    # song_panda.to_csv('smule_panda.csv', index=False)
+
+    user_playlists = playlistify.get_user_playlists()
+    user_playlists.to_csv('playlistify/static/user_playlists.csv', index=False)
 
     # playlistify.get_spotipy_playlist('https://open.spotify.com/playlist/6B68YiiaqNNQRQpNuDgPJA?si=b3ec1829ef1645c8')

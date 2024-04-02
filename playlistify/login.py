@@ -2,9 +2,10 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 import urllib.parse
 from datetime import datetime
 import requests
-
 import pandas as pd
 import os
+
+from playlistify.SpotifyAnalyzer import SpotifyAnalyzer
 
 # Login blueprint
 login = Blueprint('login', __name__)
@@ -51,30 +52,12 @@ def callback():
     response = requests.post(TOKEN_URL, data=data)
     response_data = response.json()
 
-    session['access_token'] = response_data['access_token']
+    session['user_access_token'] = response_data['access_token']
     session['refresh_token'] = response_data['refresh_token']
     session['expires_at'] = datetime.now().timestamp() + response_data['expires_in']
 
-    return redirect(url_for('login.profile'))
+    return redirect(url_for('login.user_playlists'))
 
-
-@login.route('/profile')
-def profile():
-    access_token = session.get('access_token')
-    if not access_token:
-        return redirect('/login')
-    
-    if datetime.now().timestamp() > session.get('expires_at'):
-        return redirect(url_for('login.refresh_token'))
-
-    headers = {
-        'Authorization': f'Bearer {access_token}'
-    }
-
-    response = requests.get(f'{API_BASE_URL}me', headers=headers)
-    response_data = response.json()
-
-    return jsonify(response_data)
 
 
 @login.route('/refresh_token')
@@ -94,7 +77,32 @@ def refresh_token():
         response = requests.post(TOKEN_URL, data=data)
         new_response_data = response.json()
 
-        session['access_token'] = new_response_data['access_token']
+        session['user_access_token'] = new_response_data['access_token']
         session['expires_at'] = datetime.now().timestamp() + new_response_data['expires_in']
 
     return redirect(url_for('login.profile'))
+
+
+@login.route('/user_playlists')
+def user_playlists():
+    access_token = session.get('user_access_token')
+    if not access_token or datetime.now().timestamp() > session.get('expires_at'):
+        return redirect(url_for('login.refresh_token'))
+
+    Sp = SpotifyAnalyzer(redirect_uri=REDIRECT_URI, token=access_token)
+    playlists = Sp.get_user_playlists()
+    user_info = Sp.get_user_info()
+    print(playlists)
+    print(user_info)
+    return render_template('user_playlists.html', user_info=user_info, playlists=playlists)
+
+@login.route('/user_profile')
+def user_profile():
+    access_token = session.get('user_access_token')
+    if not access_token or datetime.now().timestamp() > session.get('expires_at'):
+        return redirect(url_for('login.refresh_token'))
+
+    Sp = SpotifyAnalyzer(redirect_uri=REDIRECT_URI, token=access_token)
+    user_info = Sp.get_user_info()
+    dummy_uploads = pd.DataFrame({'name': ['jigsaw'], 'avg_rating': [4.9]})
+    return render_template('user_profile.html', user_info=user_info, uploaded_playlists=dummy_uploads)

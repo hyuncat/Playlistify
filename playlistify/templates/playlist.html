@@ -11,7 +11,12 @@ src="https://cdn.datatables.net/1.11.1/js/jquery.dataTables.min.js"></script>
 
 <script type="text/javascript" class="init">
   $(document).ready(function() {
-    $('#playlist_table').DataTable();
+    $('#playlist_table').DataTable(
+      {
+            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+            "pageLength": -1
+        }
+    );
   });
 </script>
 

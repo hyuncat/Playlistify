@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!--Styling and JS for datatable-->
+<!-- <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.1/css/bootstrap.min.css"> -->
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.1/css/dataTables.bootstrap5.min.css">
+<script type="text/javascript" language="javascript" src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script type="text/javascript" language="javascript" 
+src="https://cdn.datatables.net/1.11.1/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" language="javascript" src="https://cdn.datatables.net/1.11.1/js/dataTables.bootstrap5.min.js"></script>
+
+<script type="text/javascript" class="init">
+  $(document).ready(function() {
+    $('#uploaded_playlist_table').DataTable(
+      {
+            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+            "pageLength": -1
+        }
+    );
+  });
+</script>
+
+
+<div class="container text-center">
+    <div class="row justify-content-center align-self-center mt-4">
+      <h1>{{user_info['display_name']}}</h1>
+    </div>
+    <div class="row justify-content-center align-self-center mt-4">
+      <img src="{{user_info['image_url']}}" alt="img" style="width: 100px; height: 75px;">
+    </div>
+    <div class="row justify-content-center align-self-center mt-4">
+      <!-- <table class="table table-hover table-responsive"> -->
+      <table id="playlist_table" class="table table-hover table-responsive">
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Playlist</th>
+            <th scope="col">Average Rating</th>
+            <th scope="col">More info</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for idx, playlist in uploaded_playlists.iterrows() %}
+          <tr>
+            <th scope="row">{{idx+1}}</th>
+            <td scope="row">{{playlist['name']}}</th>
+            <td scope="row">{{playlist['avg_rating']}}</th>
+            <td><a href="#" class="btn btn-light">More info</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+{% endblock %}
