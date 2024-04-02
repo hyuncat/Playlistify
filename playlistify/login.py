@@ -56,6 +56,12 @@ def callback():
     session['refresh_token'] = response_data['refresh_token']
     session['expires_at'] = datetime.now().timestamp() + response_data['expires_in']
 
+    Sp = SpotifyAnalyzer(redirect_uri=REDIRECT_URI, token=session['user_access_token'])
+    user_info = Sp.get_user_info()
+    session['user_id'] = user_info['user_id']
+    session['display_name'] = user_info['display_name']
+    session['user_img'] = user_info['image_url']
+
     return redirect(url_for('login.user_playlists'))
 
 
@@ -102,7 +108,12 @@ def user_profile():
     if not access_token or datetime.now().timestamp() > session.get('expires_at'):
         return redirect(url_for('login.refresh_token'))
 
-    Sp = SpotifyAnalyzer(redirect_uri=REDIRECT_URI, token=access_token)
-    user_info = Sp.get_user_info()
+    # Sp = SpotifyAnalyzer(redirect_uri=REDIRECT_URI, token=access_token)
+    # user_info = Sp.get_user_info()
+    user_info = {
+        'user_id': session.get('user_id'),
+        'display_name': session.get('display_name'),
+        'image_url': session.get('image_url')
+    }
     dummy_uploads = pd.DataFrame({'name': ['jigsaw'], 'avg_rating': [4.9]})
     return render_template('user_profile.html', user_info=user_info, uploaded_playlists=dummy_uploads)
