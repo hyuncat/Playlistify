@@ -100,17 +100,17 @@ def post_playlist():
         with my_engine.connect() as conn:
             # Insert or update user
             insert_playlist = text("""INSERT INTO playlist (playlist_id, title, image_url, description) 
-                                   VALUES (:id, :title, :image_url, :description) 
-                                   ON CONFLICT (id) DO NOTHING""")
+                                   VALUES (:playlist_id, :title, :image_url, :description) 
+                                   ON CONFLICT (playlist_id) DO NOTHING""")
             params = {
-                'id': playlist_data['playlist_id'],
-                'title': playlist_data['name'],
+                'playlist_id': playlist_data['playlist_id'],
+                'title': playlist_data['title'],
                 'image_url': playlist_data['image_url'],
                 'description': playlist_data['description']
             }
             conn.execute(insert_playlist, params)
             conn.commit()
-            print(f'inserted playlist: {playlist_data["name"]}!')
+            print(f'inserted playlist: {playlist_data["title"]}!')
     else:
         print("Error uploading playlist to database")
     

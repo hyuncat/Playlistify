@@ -21,7 +21,8 @@ from .login import login as lg
 DB_USERNAME = os.getenv('DATABASE_USERNAME')
 DB_PASSWORD = os.getenv('DATABASE_PASSWORD')
 DB_HOST = os.getenv('DATABASE_HOST')
-DATABASE_URI = f"postgresql://{DB_USERNAME}:{DB_USERNAME}@{DB_HOST}/proj1part2"
+DATABASE_URI = f"postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}/proj1part2"
+print(DATABASE_URI)
 
 # Create a database engine that knows how to connect to the URI above.
 my_engine = create_engine(DATABASE_URI)
@@ -33,7 +34,7 @@ app.config.from_mapping(
     DB_USER=DB_USERNAME,
     DB_PASSWORD=DB_PASSWORD,
     DB_HOST=DB_HOST,
-    DB_PORT=8111,
+    DB_PORT=5432,
     SESSION_TYPE='filesystem',  # Set the session type to use filesystem storage
     SESSION_FILE_DIR=os.path.join(app.instance_path, 'sessions'),  # Specify the directory to store session files
 )
