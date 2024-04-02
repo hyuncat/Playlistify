@@ -82,30 +82,36 @@ def analyze_playlist(playlist_id):
     return redirect(url_for('main.playlist'))
 
 
-@main.route('/playlist')
+@main.route('/playlist', methods=['GET'])
 def playlist():
     if 'playlist_data' in session:
         playlist_data = session['playlist_data']
         song_data = pickle.loads(zlib.decompress(session['song_panda']))
-
-        if request.method == 'POST':
-
-            with my_engine.connect() as conn:
-                # Insert or update user
-                insert_playlist = text("""INSERT INTO playlist (playlist_id, title, image_url, description) 
-                                       VALUES (:id, :title, :image_url, :description) 
-                                       ON CONFLICT (id) DO NOTHING""")
-                params = {
-                    'id': playlist_data['playlist_id'],
-                    'title': playlist_data['name'],
-                    'image_url': playlist_data['image_url'],
-                    'description': playlist_data['description']
-                }
-                conn.execute(insert_playlist, params)
-                conn.commit()
-                print(f'inserted playlist: {playlist_data["name"]}!')
-
-
         return render_template('playlist.html', playlist_data=playlist_data, song_data=song_data)
     else:
         return redirect(url_for('main.home'))
+
+@main.route('/post_playlist', methods=['POST', 'GET'])
+def post_playlist():
+    if 'playlist_data' in session:
+        playlist_data = session['playlist_data']
+        song_data = pickle.loads(zlib.decompress(session['song_panda']))
+
+        with my_engine.connect() as conn:
+            # Insert or update user
+            insert_playlist = text("""INSERT INTO playlist (playlist_id, title, image_url, description) 
+                                   VALUES (:id, :title, :image_url, :description) 
+                                   ON CONFLICT (id) DO NOTHING""")
+            params = {
+                'id': playlist_data['playlist_id'],
+                'title': playlist_data['name'],
+                'image_url': playlist_data['image_url'],
+                'description': playlist_data['description']
+            }
+            conn.execute(insert_playlist, params)
+            conn.commit()
+            print(f'inserted playlist: {playlist_data["name"]}!')
+    else:
+        print("Error uploading playlist to database")
+    
+    return redirect(url_for('main.playlist'))
