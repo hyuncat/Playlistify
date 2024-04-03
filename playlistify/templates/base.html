@@ -15,8 +15,8 @@
           </button>
           <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
             <div class="navbar-nav">
-              <a class="nav-link active" aria-current="page" href="{% if 'user_access_token' in session %}/user_playlists{% else %}/{% endif %}">Analyze</a>
-              <a class="nav-link" href="#">Top Playlists</a>
+              <a class="nav-link active" aria-current="page" href="{% if 'user_access_token' in session %}/user_playlists{% else %}/{% endif %}">{% if 'user_access_token' not in session %}Analyze{% else %}My Playlists{% endif %}</a>
+              <a class="nav-link" href="/browse">Browse Playlists</a>
             </div> 
             <div class="navbar-nav ms-auto">
               <a class="nav-link" href="#">Search</a>
@@ -27,6 +27,8 @@
       </nav>
     {% block content %}{% endblock %}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <!-- Script used to delay redirecting the user to the Spotify login page -->
+    <script src="{{ url_for('static', filename='auth.js') }}"></script>
+    <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script> -->
   </body>
 </html>

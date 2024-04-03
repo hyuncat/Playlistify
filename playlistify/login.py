@@ -1,11 +1,13 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, flash
 import urllib.parse
 from datetime import datetime
 import requests
 import pandas as pd
 import os
+from sqlalchemy import text
 
 from playlistify.SpotifyAnalyzer import SpotifyAnalyzer
+from .db_config import my_engine
 
 # Login blueprint
 login = Blueprint('login', __name__)
@@ -89,7 +91,7 @@ def refresh_token():
     return redirect(url_for('login.user_profile'))
 
 
-@login.route('/user_playlists')
+@login.route('/user_playlists', methods=['GET'])
 def user_playlists():
     access_token = session.get('user_access_token')
     if not access_token or datetime.now().timestamp() > session.get('expires_at'):
@@ -99,7 +101,12 @@ def user_playlists():
     playlists = Sp.get_user_playlists()
     user_info = Sp.get_user_info()
     print(playlists)
-    print(user_info)
+
+    # if request.method == 'POST':
+    #     playlist_id = request.form['playlist_id']
+    #     session['playlist_id'] = playlist_id
+    #     return redirect(url_for('main.analyze_playlist', playlist_id=playlist_id))
+
     return render_template('user_playlists.html', user_info=user_info, playlists=playlists)
 
 @login.route('/user_profile')
@@ -115,5 +122,123 @@ def user_profile():
         'display_name': session.get('display_name'),
         'image_url': session.get('image_url')
     }
-    dummy_uploads = pd.DataFrame({'name': ['jigsaw'], 'avg_rating': [4.9]})
-    return render_template('user_profile.html', user_info=user_info, uploaded_playlists=dummy_uploads)
+    with my_engine.connect() as conn:
+        select_playlists = text("""
+            SELECT playlist.title, playlist.playlist_id, AVG(rate.rating) AS avg_rating
+            FROM HasPlaylist
+            INNER JOIN playlist ON HasPlaylist.user_id = :user_id AND HasPlaylist.playlist_id = playlist.playlist_id
+            LEFT JOIN rate ON playlist.playlist_id = rate.playlist_id
+            GROUP BY playlist.title, playlist.playlist_id
+        """)
+        params = {
+            'user_id': user_info['user_id']
+        }
+        cursor = conn.execute(select_playlists, params)
+        uploaded_playlists = []
+        for result in cursor:
+            uploaded_playlists.append(result[0:3])
+            print(result)
+        uploaded_playlists = pd.DataFrame(uploaded_playlists, columns=['title', 'playlist_id', 'avg_rating'])
+        uploaded_playlists['avg_rating'] = uploaded_playlists['avg_rating'].apply(lambda x: round(x, 2) if pd.notnull(x) else x)
+    return render_template('user_profile.html', user_info=user_info, uploaded_playlists=uploaded_playlists)
+
+
+@login.route('/view_playlist/<playlist_id>')
+def view_playlist(playlist_id):
+    with my_engine.connect() as conn:
+        select_playlist = text("""
+            SELECT playlist_id, title, image_url, description
+            FROM playlist
+            WHERE playlist_id = :playlist_id
+        """)
+        params = {
+            'playlist_id': playlist_id
+        }
+        cursor = conn.execute(select_playlist, params)
+        playlist_data = cursor.fetchone()
+
+        select_songs = text("""
+            SELECT song_id, title, popularity, 
+                (features).danceability, (features).energy, (features).music_key, 
+                (features).loudness, (features).music_mode, (features).speechiness, 
+                (features).acousticness, (features).instrumentalness, 
+                (features).liveness, (features).valence, (features).tempo, 
+                (features).duration_ms, (features).time_signature, genres
+            FROM song
+            WHERE song_id IN (
+                SELECT song_id
+                FROM PlaylistSong
+                WHERE playlist_id = :playlist_id
+            )
+        """)
+        cursor = conn.execute(select_songs, params)
+        song_rows = []
+        for result in cursor:
+            song_rows.append(result[0:17])
+        
+        song_colnames = [
+            'song_id', 'title', 'popularity', 'danceability', 'energy', 'music_key',
+            'loudness', 'music_mode', 'speechiness', 'acousticness', 'instrumentalness',
+            'liveness', 'valence', 'tempo', 'duration_ms', 'time_signature', 'genres'
+        ]
+        sql_reconstructed_song_panda = pd.DataFrame(song_rows, columns=song_colnames)
+
+        select_reviews = text("""
+            SELECT users.name, rate.rating, rate.rate_text
+            FROM Rate
+            INNER JOIN users ON Rate.user_id = users.user_id
+            WHERE Rate.playlist_id = :playlist_id
+        """)
+        cursor = conn.execute(select_reviews, params)
+        reviews = []
+        for result in cursor:
+            reviews.append(result)
+        review_panda = pd.DataFrame(reviews, columns=['user_name', 'rating', 'rate_text'])
+
+    return render_template('view_playlist.html', playlist_data=playlist_data, song_data=sql_reconstructed_song_panda, reviews=review_panda)
+        
+
+@login.route('/rate_playlist/<playlist_id>', methods=['GET', 'POST'])
+def rate_playlist(playlist_id):
+    if request.method == 'POST':
+        rating = request.form['rating']
+        comment = request.form.get('comment')  # .get() is used here so that it returns None if 'comment' is not in the form
+
+        # Validate the inputs
+        if not 0 <= int(rating) <= 10:
+            flash('Rating must be between 0 and 10.')
+            return redirect(url_for('main.rate_playlist', playlist_id=playlist_id))
+
+        with my_engine.connect() as conn:
+            # Check if the user has already rated the playlist
+            select_query = text("""
+                SELECT user_id
+                FROM Rate
+                WHERE user_id = :user_id AND playlist_id = :playlist_id
+            """)
+            params = {
+                'user_id': session['user_id'],
+                'playlist_id': playlist_id
+            }
+            cursor = conn.execute(select_query, params)
+            if cursor.fetchone():
+                flash('You have already rated this playlist.')
+                return redirect(url_for('login.view_playlist', playlist_id=playlist_id))
+            
+            # Update the database if else
+            update_query = text("""
+                INSERT INTO Rate (user_id, playlist_id, rating, rate_text)
+                VALUES (:user_id, :playlist_id, :rating, :comment)
+            """)
+            params = {
+                'user_id': session['user_id'],  # 'user_id' is stored in the session when the user logs in
+                'playlist_id': playlist_id,
+                'rating': rating,
+                'comment': comment
+            }
+            conn.execute(update_query, params)
+            conn.commit()
+            print(f'{session['user_id']} submitted rating: {rating}, comment: {comment}')
+
+        flash('Your rating has been submitted.')
+        return redirect(url_for('login.view_playlist', playlist_id=playlist_id))

@@ -35,6 +35,7 @@ def redirect_playlist():
         session['playlist_id'] = playlist_id
         return redirect(url_for('main.auth'))
 
+
 @main.route('/auth')
 def auth():
     """Get user authorization and set access token"""
@@ -51,6 +52,7 @@ def auth():
         if res.status_code == 200:
             access_token = res.json()['access_token']
             session['access_token'] = access_token
+            return redirect(url_for('main.analyze_playlist', playlist_id=session['playlist_id']))
             response = jsonify({'redirect': url_for('main.analyze_playlist', playlist_id=session['playlist_id'])})
             response.headers.add('Access-Control-Allow-Origin', '*')
             return response
@@ -72,13 +74,18 @@ def analyze_playlist(playlist_id):
         return redirect(url_for('main.auth'))
     
     # Process the playlist link
-    Sp = SpotifyAnalyzer(redirect_uri=REDIRECT_URI, token=session['access_token'])
-    play_dict, song_pd = Sp.get_playlist_details(playlist_id)
+    try:
+        Sp = SpotifyAnalyzer(redirect_uri=REDIRECT_URI, token=session['access_token'])
+        play_dict, song_pd, art_pd = Sp.get_playlist_details(playlist_id)
+    except Exception as e:
+        return redirect(url_for('main.auth'))
     session['playlist_data'] = play_dict
 
     # Pickle data to compress and store in session
     pickled_panda = zlib.compress(pickle.dumps(song_pd))
+    pickled_artsy_panda = zlib.compress(pickle.dumps(art_pd))
     session['song_panda'] = pickled_panda
+    session['art_panda'] = pickled_artsy_panda
     return redirect(url_for('main.playlist'))
 
 
@@ -100,6 +107,7 @@ def post_playlist():
 
         playlist_data = session['playlist_data']
         song_data = pickle.loads(zlib.decompress(session['song_panda']))
+        art_data = pickle.loads(zlib.decompress(session['art_panda']))
 
         with my_engine.connect() as conn:
             # Insert playlist
@@ -153,8 +161,8 @@ def post_playlist():
                     'song_id': row['song_id'],
                     'title': row['song_title'],
                     'features': f"({row['acousticness']}, {row['danceability']}, {row['duration_ms']}, {row['energy']}, "
-                                f"{row['instrumentalness']}, {row['key']}, {row['liveness']}, {row['loudness']}, "
-                                f"{row['mode']}, {row['speechiness']}, {row['tempo']}, {row['time_signature']}, "
+                                f"{row['instrumentalness']}, {row['music_key']}, {row['liveness']}, {row['loudness']}, "
+                                f"{row['music_mode']}, {row['speechiness']}, {row['tempo']}, {row['time_signature']}, "
                                 f"{row['valence']})",
                     'popularity': row['popularity'],
                     'genres': row['genres']
@@ -175,10 +183,54 @@ def post_playlist():
                 conn.commit()
                 print(f'inserted playlist_song: ({playlist_data["title"]}, {row["song_title"]})')
 
-                # Insert PlaylistArtists
+            # Insert PlaylistArtists
+            for _, row in art_data.iterrows():
+                insert_artist = text("""INSERT INTO Artist (artist_id, name, image_url, popularity, genres) 
+                                   VALUES (:artist_id, :name, :image_url, :popularity, ARRAY[:genres]) 
+                                   ON CONFLICT (artist_id) DO NOTHING""")
+                params = {
+                    'artist_id': row['artist_id'],
+                    'name': row['name'],
+                    'image_url': row['image_url'],
+                    'popularity': row['popularity'],
+                    'genres': row['genres']
+                }
+                conn.execute(insert_artist, params)
+                conn.commit()
+                print(f'inserted artist: {row["name"]}')
+
+                # Insert SongArtists
+                insert_song_artist = text("""INSERT INTO SongArtist (song_id, artist_id) 
+                                      VALUES (:song_id, :artist_id) 
+                                      ON CONFLICT (song_id, artist_id) DO NOTHING""")
+                params = {
+                    'song_id': row['song_id'],
+                    'artist_id': row['artist_id']
+                }
+                conn.execute(insert_song_artist, params)
+                conn.commit()
+                print(f'inserted song_artist: ({row["song_title"]}, {row["name"]})')
 
 
     else:
         print("Error uploading playlist to database")
     
     return redirect(url_for('main.playlist'))
+
+
+@main.route('/browse')
+def browse():
+    with my_engine.connect() as conn:
+        all_playlists = text("""
+            SELECT playlist.title, playlist.playlist_id, users.name
+            FROM HasPlaylist
+            JOIN playlist ON HasPlaylist.playlist_id = playlist.playlist_id
+            JOIN users ON HasPlaylist.user_id = users.user_id
+        """)
+        cursor = conn.execute(all_playlists)
+        uploaded_playlists = []
+        for result in cursor:
+            uploaded_playlists.append(result[0:3])
+            print(result)
+        uploaded_playlists = pd.DataFrame(uploaded_playlists, columns=['title', 'playlist_id', 'user_name'])
+    return render_template('browse.html', all_playlists=uploaded_playlists)

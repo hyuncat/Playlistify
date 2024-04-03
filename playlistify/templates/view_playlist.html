@@ -14,7 +14,13 @@ src="https://cdn.datatables.net/1.11.1/js/jquery.dataTables.min.js"></script>
     $('#playlist_table').DataTable(
       {
             "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
-            "pageLength": -1
+            "pageLength": 10
+        }
+    );
+    $('#review_table').DataTable(
+      {
+            "lengthMenu": [[5, 10, 25, -1], [5, 10, 25, "All"]],
+            "pageLength": 5
         }
     );
   });
@@ -27,14 +33,15 @@ src="https://cdn.datatables.net/1.11.1/js/jquery.dataTables.min.js"></script>
     <div class="row justify-content-center align-self-center mt-4">
       <img src="{{playlist_data['image_url']}}" alt="img" style="width: 200px; height: 200px;">
     </div>
+    
     <div class="row justify-content-center align-self-center mt-4">
-      <!-- <table class="table table-hover table-responsive"> -->
+      <!-- Table -->
       <table id="playlist_table" class="table table-hover table-responsive">
         <thead>
           <tr>
             <th scope="col">#</th>
             <th scope="col">Track</th>
-            <th scope="col">Artist</th>
+            <!-- <th scope="col">Artist</th> -->
             <th scope="col">Popularity</th>
             <th scope="col">Danceability</th>
             <th scope="col">Energy</th>
@@ -56,8 +63,8 @@ src="https://cdn.datatables.net/1.11.1/js/jquery.dataTables.min.js"></script>
           {% for idx, song in song_data.iterrows() %}
           <tr>
             <th scope="row">{{idx+1}}</th>
-            <td>{{song['song_title']}}</td>
-            <td>{{song['artists']}}</td>
+            <td>{{song['title']}}</td>
+            <!-- <td>{{song['artists']}}</td> -->
             <td>{{song['popularity']}}</td>
             <td>{{song['danceability']}}</td>
             <td>{{song['energy']}}</td>
@@ -78,11 +85,53 @@ src="https://cdn.datatables.net/1.11.1/js/jquery.dataTables.min.js"></script>
         </tbody>
       </table>
     </div>
+
+    <!-- Rate -->
     <div class="row justify-content-center align-self-center mt-4 mb-4">
-      <div class="col-auto">
-        <a href="{{ url_for('main.post_playlist') }}" class="btn btn-primary">Post</a>
-      </div>
+        <div class="col-auto">
+            <h3 class=>Leave a review</h3>
+            <form action="/rate_playlist/{{playlist_data['playlist_id']}}" method="post">
+                <div class="input-group justify-content-center align-self-center mt-2 mb-2">
+                    <span class="input-group-text" id="basic-addon1">Rating (0-10)</span>
+                    <input type="number" id="rating" name="rating" min="0" max="10" required>
+                </div>
+                <div class="form-group justify-content-center align-self-center mt-4 mb-2">
+                    <label for="basic-url" class="form-label">Message:</label>
+                    <br>
+                    <textarea class="form-control" id="comment" name="comment" rows="4" cols="50" required></textarea>
+                </div>
+                <div class="form-group justify-content-center align-self-center mt-4 mb-4">
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Reviews -->
+    <div class="row justify-content-center align-self-center mt-4 mb-4">
+        <div class="col-auto">
+            <h3>Reviews</h3>
+            <table id="review_table" class="table table-hover table-responsive">
+                <thead>
+                    <tr>
+                        <th scope="col">User</th>
+                        <th scope="col">Rating</th>
+                        <th scope="col">Comment</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for idx, review in reviews.iterrows() %}
+                    <tr>
+                        <td scope="row">{{ review['user_name'] }}</th>
+                        <td>{{ review['rating'] }}</td>
+                        <td>{{ review['rate_text'] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
   </div>
+</div>
+  
 
 {% endblock %}

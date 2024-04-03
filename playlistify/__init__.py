@@ -36,6 +36,7 @@ app.config.from_mapping(
     DB_PORT=5432,
     SESSION_TYPE='filesystem',  # Set the session type to use filesystem storage
     SESSION_FILE_DIR=os.path.join(app.instance_path, 'sessions'),  # Specify the directory to store session files
+    SESSION_PERMANENT=False
 )
 
 # Load additional configuration from config.py

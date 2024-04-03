@@ -138,6 +138,7 @@ class SpotifyAnalyzer:
                 - duration_ms
                 - time_signature
                 - genres
+            - art_panda: dataframe containing artist details
         """
         # Get playlist ID from the provided link
         # playlist_id = playlist_link.split('/')[-1]
@@ -161,19 +162,31 @@ class SpotifyAnalyzer:
 
         # Create dataframe of audio features for each song in playlist
         song_df = []
+        artinfo = [] # and artist info!
         for track in playlist_data['tracks']['items']:
 
-            # Get genres for each artist in song
+            # Get genres and artist info for each artist in song
             genres = []
             artists = [artist['id'] for artist in track['track']['artists']]
             artists_uri_string = ",".join(artists)
             several_artists_response = requests.get(f'https://api.spotify.com/v1/artists?ids={artists_uri_string}', headers=self.headers)
+            
             if several_artists_response.status_code == 200:
                 several_artists_data = several_artists_response.json()
                 print(several_artists_data)
+
                 for artist in several_artists_data['artists']:
                     genres.extend(artist['genres'])
-
+                    art_data = {
+                        'artist_id': artist['id'],
+                        'name': artist['name'],
+                        'image_url': artist['images'][0]['url'] if artist['images'] else None,
+                        'genres': artist['genres'],
+                        'popularity': artist['popularity'],
+                        'song_id': track['track']['id'],
+                        'song_title': track['track']['name']
+                    }
+                    artinfo.append(art_data)
 
             # Get song audio features
             song_uri = track['track']['uri'].split(':')[-1]
@@ -193,9 +206,9 @@ class SpotifyAnalyzer:
                 'popularity' : track['track']['popularity'],
                 'danceability': song_data_json['danceability'],
                 'energy': song_data_json['energy'],
-                'key': song_data_json['key'],
+                'music_key': song_data_json['key'],
                 'loudness': song_data_json['loudness'],
-                'mode': song_data_json['mode'],
+                'music_mode': song_data_json['mode'],
                 'speechiness': song_data_json['speechiness'],
                 'acousticness': song_data_json['acousticness'],
                 'instrumentalness': song_data_json['instrumentalness'],
@@ -210,7 +223,8 @@ class SpotifyAnalyzer:
             song_df.append(song_row)
         
         song_panda = pd.DataFrame(song_df)
-        return playlist_info, song_panda
+        art_panda = pd.DataFrame(artinfo)
+        return playlist_info, song_panda, art_panda
     
 
 def extract_playlist_id(url):
