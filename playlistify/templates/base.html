@@ -15,11 +15,11 @@
           </button>
           <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
             <div class="navbar-nav">
-              <a class="nav-link active" aria-current="page" href="{% if 'user_access_token' in session %}/user_playlists{% else %}/{% endif %}">{% if 'user_access_token' not in session %}Analyze{% else %}My Playlists{% endif %}</a>
+              <a class="nav-link active" aria-current="page" href="{% if 'user_access_token' in session %}{{ url_for('login.user_playlists') }}{% else %}/{% endif %}">{% if 'user_access_token' not in session %}Analyze{% else %}My Playlists{% endif %}</a>
               <a class="nav-link" href="/browse">Browse Playlists</a>
             </div> 
             <div class="navbar-nav ms-auto">
-              <a class="nav-link" href="#">Search</a>
+              <a class="nav-link" href="/search">Search</a>
               <a class="nav-link" href="{% if 'user_access_token' not in session %}/login{% else %}/user_profile{% endif %}">{% if 'user_access_token' not in session %}Login{% else %}Profile{% endif %}</a>
             </div>
           </div>

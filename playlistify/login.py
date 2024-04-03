@@ -5,6 +5,7 @@ import requests
 import pandas as pd
 import os
 from sqlalchemy import text
+import ast
 
 from playlistify.SpotifyAnalyzer import SpotifyAnalyzer
 from .db_config import my_engine
@@ -68,8 +69,8 @@ def callback():
 
 
 
-@login.route('/refresh_token')
-def refresh_token():
+@login.route('/refresh_token/<redirect_route>')
+def refresh_token(redirect_route):
     refresh_token = session.get('refresh_token')
     if not refresh_token:
         return redirect('/login')
@@ -88,14 +89,14 @@ def refresh_token():
         session['user_access_token'] = new_response_data['access_token']
         session['expires_at'] = datetime.now().timestamp() + new_response_data['expires_in']
 
-    return redirect(url_for('login.user_profile'))
+    return redirect(url_for(redirect_route))
 
 
 @login.route('/user_playlists', methods=['GET'])
 def user_playlists():
     access_token = session.get('user_access_token')
     if not access_token or datetime.now().timestamp() > session.get('expires_at'):
-        return redirect(url_for('login.refresh_token'))
+        return redirect(url_for('login.refresh_token', redirect_route='login.user_playlists'))
 
     Sp = SpotifyAnalyzer(redirect_uri=REDIRECT_URI, token=access_token)
     playlists = Sp.get_user_playlists()
@@ -113,7 +114,7 @@ def user_playlists():
 def user_profile():
     access_token = session.get('user_access_token')
     if not access_token or datetime.now().timestamp() > session.get('expires_at'):
-        return redirect(url_for('login.refresh_token'))
+        return redirect(url_for('login.refresh_token', redirect_route='login.user_profile'))
 
     # Sp = SpotifyAnalyzer(redirect_uri=REDIRECT_URI, token=access_token)
     # user_info = Sp.get_user_info()
@@ -147,9 +148,11 @@ def user_profile():
 def view_playlist(playlist_id):
     with my_engine.connect() as conn:
         select_playlist = text("""
-            SELECT playlist_id, title, image_url, description
-            FROM playlist
-            WHERE playlist_id = :playlist_id
+            SELECT p.playlist_id, p.title, p.image_url, p.description, u.user_id AS owner_id, u.name AS owner_name
+            FROM playlist AS p
+            INNER JOIN HasPlaylist AS hp ON p.playlist_id = hp.playlist_id
+            INNER JOIN users AS u ON hp.user_id = u.user_id
+            WHERE p.playlist_id = :playlist_id
         """)
         params = {
             'playlist_id': playlist_id
@@ -158,30 +161,50 @@ def view_playlist(playlist_id):
         playlist_data = cursor.fetchone()
 
         select_songs = text("""
-            SELECT song_id, title, popularity, 
-                (features).danceability, (features).energy, (features).music_key, 
-                (features).loudness, (features).music_mode, (features).speechiness, 
-                (features).acousticness, (features).instrumentalness, 
-                (features).liveness, (features).valence, (features).tempo, 
-                (features).duration_ms, (features).time_signature, genres
+            SELECT song.song_id, song.title, song.popularity, 
+                (song.features).danceability, (song.features).energy, (song.features).music_key, 
+                (song.features).loudness, (song.features).music_mode, (song.features).speechiness, 
+                (song.features).acousticness, (song.features).instrumentalness, 
+                (song.features).liveness, (song.features).valence, (song.features).tempo, 
+                (song.features).duration_ms, (song.features).time_signature, song.genres,
+                array_agg(artist.name) AS artist_names
             FROM song
-            WHERE song_id IN (
+            INNER JOIN SongArtist ON song.song_id = SongArtist.song_id
+            INNER JOIN artist ON SongArtist.artist_id = artist.artist_id
+            WHERE song.song_id IN (
                 SELECT song_id
                 FROM PlaylistSong
                 WHERE playlist_id = :playlist_id
             )
+            GROUP BY song.song_id
         """)
         cursor = conn.execute(select_songs, params)
         song_rows = []
         for result in cursor:
-            song_rows.append(result[0:17])
+            song_rows.append(result[0:18])
         
         song_colnames = [
             'song_id', 'title', 'popularity', 'danceability', 'energy', 'music_key',
             'loudness', 'music_mode', 'speechiness', 'acousticness', 'instrumentalness',
-            'liveness', 'valence', 'tempo', 'duration_ms', 'time_signature', 'genres'
+            'liveness', 'valence', 'tempo', 'duration_ms', 'time_signature', 'genres', 'artist_names'
         ]
         sql_reconstructed_song_panda = pd.DataFrame(song_rows, columns=song_colnames)
+
+        def unpack_col(value):
+            if isinstance(value, str):
+                unstringed_list = ast.literal_eval(value)
+            else:
+                unstringed_list = value
+            # Flatten the list if it contains sublists
+            if any(isinstance(i, list) for i in unstringed_list):
+                unstringed_list = [item for sublist in unstringed_list for item in sublist]
+            try:
+                return ', '.join(unstringed_list)
+            except Exception as e:
+                return unstringed_list
+
+        sql_reconstructed_song_panda['artist_names'] = sql_reconstructed_song_panda['artist_names'].apply(unpack_col)
+        sql_reconstructed_song_panda['genres'] = sql_reconstructed_song_panda['genres'].apply(unpack_col)
 
         select_reviews = text("""
             SELECT users.name, rate.rating, rate.rate_text

@@ -11,10 +11,10 @@ src="https://cdn.datatables.net/1.11.1/js/jquery.dataTables.min.js"></script>
 
 <script type="text/javascript" class="init">
   $(document).ready(function() {
-    $('#uploaded_playlist_table').DataTable(
+    $('#browse_playlists').DataTable(
       {
             "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
-            "pageLength": -1
+            "pageLength": 25
         }
     );
   });
@@ -23,34 +23,35 @@ src="https://cdn.datatables.net/1.11.1/js/jquery.dataTables.min.js"></script>
 
 <div class="container text-center">
     <div class="row justify-content-center align-self-center mt-4">
-      <h1>{{user_info['display_name']}}</h1>
+      <h1>Search results</h1>
     </div>
     <div class="row justify-content-center align-self-center mt-4">
-      <img src="{{user_info['image_url']}}" alt="img" style="width: 100px; height: 75px;">
+      <p>Playlists containing "{{query}}":</p>
     </div>
     <div class="row justify-content-center align-self-center mt-4">
-      <h3>Uploaded Playlists</h3>
-      <!-- <table class="table table-hover table-responsive"> -->
-      <table id="uploaded_playlist_table" class="table table-hover table-responsive">
+      <table id="search_results" class="table table-hover table-responsive">
         <thead>
           <tr>
             <th scope="col">#</th>
             <th scope="col">Playlist</th>
-            <th scope="col">Average Rating</th>
+            <th scope="col">Creator</th>
             <th scope="col"></th>
           </tr>
         </thead>
         <tbody>
-          {% for idx, playlist in uploaded_playlists.iterrows() %}
+          {% for idx, row in search_results.iterrows() %}
           <tr>
             <th scope="row">{{idx+1}}</th>
-            <td scope="row">{{playlist['title']}}</th>
-            <td scope="row">{{playlist['avg_rating']}}</th>
-            <td><a href="/view_playlist/{{ playlist['playlist_id'] }}" class="btn btn-light">View</a></td>
+            <td scope="row">{{row['title']}}</th>
+            <td scope="row">{{row['user_name']}}</th>
+            <td><a href="/view_playlist/{{ row['playlist_id'] }}" class="btn btn-light">View</a></td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
+    </div>
+    <div class="row justify-content-center align-self-center mt-4">
+       <a href="/search">Go back to search</a>
     </div>
   </div>
 

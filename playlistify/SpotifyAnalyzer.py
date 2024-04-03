@@ -157,7 +157,9 @@ class SpotifyAnalyzer:
             'playlist_id': playlist_data['id'],
             'title': playlist_data['name'],
             'description': playlist_data['description'],
-            'image_url': playlist_data['images'][0]['url'] if playlist_data['images'] else None
+            'image_url': playlist_data['images'][0]['url'] if playlist_data['images'] else None,
+            'owner_id': playlist_data['owner']['id'],
+            'owner_name': playlist_data['owner']['display_name'] 
         }
 
         # Create dataframe of audio features for each song in playlist

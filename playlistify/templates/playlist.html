@@ -2,7 +2,6 @@
 
 {% block content %}
 <!--Styling and JS for datatable-->
-<!-- <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.1/css/bootstrap.min.css"> -->
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.1/css/dataTables.bootstrap5.min.css">
 <script type="text/javascript" language="javascript" src="https://code.jquery.com/jquery-3.5.1.js"></script>
 <script type="text/javascript" language="javascript" 
@@ -23,9 +22,7 @@ src="https://cdn.datatables.net/1.11.1/js/jquery.dataTables.min.js"></script>
 <div class="container text-center">
     <div class="row justify-content-center align-self-center mt-4">
       <h1>{{playlist_data['title']}}</h1>
-    </div>
-    <div class="row justify-content-center align-self-center mt-4">
-      <img src="{{playlist_data['image_url']}}" alt="img" style="width: 200px; height: 200px;">
+      <p>Created by: <a href="https://open.spotify.com/user/{{ playlist_data['owner_id'] }}">{{ playlist_data['owner_name'] }}</a></p>      <img src="{{playlist_data['image_url']}}" alt="img" style="width: 200px; height: 200px;">
     </div>
     <div class="row justify-content-center align-self-center mt-4">
       <!-- <table class="table table-hover table-responsive"> -->
@@ -78,11 +75,13 @@ src="https://cdn.datatables.net/1.11.1/js/jquery.dataTables.min.js"></script>
         </tbody>
       </table>
     </div>
+    {% if session['user_id'] and session['user_id'] == playlist_data['owner_id'] %}
     <div class="row justify-content-center align-self-center mt-4 mb-4">
       <div class="col-auto">
         <a href="{{ url_for('main.post_playlist') }}" class="btn btn-primary">Post</a>
       </div>
     </div>
+    {% endif %}
   </div>
 
 {% endblock %}

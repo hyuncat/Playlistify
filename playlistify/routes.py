@@ -78,6 +78,7 @@ def analyze_playlist(playlist_id):
         Sp = SpotifyAnalyzer(redirect_uri=REDIRECT_URI, token=session['access_token'])
         play_dict, song_pd, art_pd = Sp.get_playlist_details(playlist_id)
     except Exception as e:
+        session['playlist_id'] = playlist_id
         return redirect(url_for('main.auth'))
     session['playlist_data'] = play_dict
 
@@ -94,6 +95,15 @@ def playlist():
     if 'playlist_data' in session:
         playlist_data = session['playlist_data']
         song_data = pickle.loads(zlib.decompress(session['song_panda']))
+
+        # Helper function to comma-join
+        def join_genres(genres):
+            if isinstance(genres, list):
+                return ', '.join(genres)
+            else:
+                return genres
+            
+        song_data['genres'] = song_data['genres'].apply(join_genres)
         return render_template('playlist.html', playlist_data=playlist_data, song_data=song_data)
     else:
         return redirect(url_for('main.home'))
@@ -109,6 +119,8 @@ def post_playlist():
         song_data = pickle.loads(zlib.decompress(session['song_panda']))
         art_data = pickle.loads(zlib.decompress(session['art_panda']))
 
+
+        # Insert data into database if it doesn't already exist
         with my_engine.connect() as conn:
             # Insert playlist
             insert_playlist = text("""INSERT INTO playlist (playlist_id, title, image_url, description) 
@@ -183,7 +195,7 @@ def post_playlist():
                 conn.commit()
                 print(f'inserted playlist_song: ({playlist_data["title"]}, {row["song_title"]})')
 
-            # Insert PlaylistArtists
+            # Insert Artist
             for _, row in art_data.iterrows():
                 insert_artist = text("""INSERT INTO Artist (artist_id, name, image_url, popularity, genres) 
                                    VALUES (:artist_id, :name, :image_url, :popularity, ARRAY[:genres]) 
@@ -211,6 +223,18 @@ def post_playlist():
                 conn.commit()
                 print(f'inserted song_artist: ({row["song_title"]}, {row["name"]})')
 
+                # Insert PlaylistArtists
+                insert_song_artist = text("""INSERT INTO PlaylistArtists (playlist_id, artist_id) 
+                                      VALUES (:playlist_id, :artist_id) 
+                                      ON CONFLICT (playlist_id, artist_id) DO NOTHING""")
+                params = {
+                    'playlist_id': playlist_data['playlist_id'],
+                    'artist_id': row['artist_id']
+                }
+                conn.execute(insert_song_artist, params)
+                conn.commit()
+                print(f'inserted playlist_artist: ({playlist_data['playlist_id']}, {row["name"]})')
+
 
     else:
         print("Error uploading playlist to database")
@@ -234,3 +258,51 @@ def browse():
             print(result)
         uploaded_playlists = pd.DataFrame(uploaded_playlists, columns=['title', 'playlist_id', 'user_name'])
     return render_template('browse.html', all_playlists=uploaded_playlists)
+
+
+@main.route('/search')
+def search():
+    return render_template('search.html')
+
+@main.route('/search_results', methods=['GET'])
+def search_results():
+    if request.method == 'GET':
+        search_term = request.args.get('query')
+        search_type = request.args.get('search_type')
+        with my_engine.connect() as conn:
+            if search_type == 'playlist':
+                search_query = text("""
+                    SELECT DISTINCT Users.name, Playlist.playlist_id, Playlist.title
+                    FROM HasPlaylist
+                    INNER JOIN Users ON HasPlaylist.user_id = Users.user_id
+                    INNER JOIN Playlist ON HasPlaylist.playlist_id = Playlist.playlist_id
+                    WHERE Playlist.title iLIKE :query
+                """)
+            elif search_type == 'artist':
+                search_query = text("""
+                    SELECT DISTINCT Users.name, Playlist.playlist_id, Playlist.title
+                    FROM HasPlaylist
+                    INNER JOIN Users ON HasPlaylist.user_id = Users.user_id
+                    INNER JOIN Playlist ON HasPlaylist.playlist_id = Playlist.playlist_id
+                    INNER JOIN PlaylistArtists ON Playlist.playlist_id = PlaylistArtists.playlist_id
+                    INNER JOIN Artist ON PlaylistArtists.artist_id = Artist.artist_id
+                    WHERE Artist.name iLIKE :query
+                """)
+            elif search_type == 'song':
+                search_query = text("""
+                    SELECT DISTINCT Users.name, Playlist.playlist_id, Playlist.title
+                    FROM HasPlaylist
+                    INNER JOIN Users ON HasPlaylist.user_id = Users.user_id
+                    INNER JOIN Playlist ON HasPlaylist.playlist_id = Playlist.playlist_id
+                    INNER JOIN PlaylistSong ON Playlist.playlist_id = PlaylistSong.playlist_id
+                    INNER JOIN Song ON PlaylistSong.song_id = Song.song_id
+                    WHERE Song.title iLIKE :query
+                """)
+            
+            params = {'query': f'%{search_term}%'}
+            cursor = conn.execute(search_query, params)
+            search_results = []
+            for result in cursor:
+                search_results.append(result[0:3])
+            search_results = pd.DataFrame(search_results, columns=['user_name', 'playlist_id', 'title'])
+            return render_template('search_results.html', search_results=search_results, query=search_term, search_type=search_type)
