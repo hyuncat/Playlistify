@@ -24,7 +24,7 @@ API_BASE_URL = 'https://api.spotify.com/v1/'
 
 @login.route('/login')
 def user_login():
-    scope = 'playlist-read-private'
+    scope = 'playlist-read-private playlist-read-collaborative user-read-private user-read-email'
     params = {
         'client_id': CLIENT_ID,
         'response_type': 'code',
@@ -45,8 +45,8 @@ def callback():
 
     code = request.args.get('code')
     data = {
-        'code': code,
         'grant_type': 'authorization_code',
+        'code': code,
         'redirect_uri': REDIRECT_URI,
         'client_id': CLIENT_ID,
         'client_secret': CLIENT_SECRET
