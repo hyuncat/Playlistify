@@ -116,6 +116,9 @@ def user_profile():
     if not access_token or datetime.now().timestamp() > session.get('expires_at'):
         return redirect(url_for('login.refresh_token', redirect_route='login.user_profile'))
 
+    if not session.get('user_id'):
+        return redirect(url_for('login.refresh_token', redirect_route='login.user_profile'))
+
     # Sp = SpotifyAnalyzer(redirect_uri=REDIRECT_URI, token=access_token)
     # user_info = Sp.get_user_info()
     user_info = {
@@ -261,7 +264,7 @@ def rate_playlist(playlist_id):
             }
             conn.execute(update_query, params)
             conn.commit()
-            print(f'{session['user_id']} submitted rating: {rating}, comment: {comment}')
+            print(f'{session["user_id"]} submitted rating: {rating}, comment: {comment}')
 
         flash('Your rating has been submitted.')
         return redirect(url_for('login.view_playlist', playlist_id=playlist_id))

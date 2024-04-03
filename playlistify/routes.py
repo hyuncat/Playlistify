@@ -233,7 +233,7 @@ def post_playlist():
                 }
                 conn.execute(insert_song_artist, params)
                 conn.commit()
-                print(f'inserted playlist_artist: ({playlist_data['playlist_id']}, {row["name"]})')
+                print(f'inserted playlist_artist: ({playlist_data["playlist_id"]}, {row["name"]})')
 
 
     else:
