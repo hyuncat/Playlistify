@@ -59,7 +59,7 @@ def callback():
     session['refresh_token'] = response_data['refresh_token']
     session['expires_at'] = datetime.now().timestamp() + response_data['expires_in']
 
-    Sp = SpotifyAnalyzer(redirect_uri=REDIRECT_URI, token=session['user_access_token'])
+    Sp = SpotifyAnalyzer(redirect_uri=REDIRECT_URI, token=response_data['access_token'])
     user_info = Sp.get_user_info()
     session['user_id'] = user_info['user_id']
     session['display_name'] = user_info['display_name']
