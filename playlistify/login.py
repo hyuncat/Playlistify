@@ -124,7 +124,7 @@ def user_profile():
     user_info = {
         'user_id': session.get('user_id'),
         'display_name': session.get('display_name'),
-        'image_url': session.get('image_url')
+        'image_url': session.get('user_img')
     }
     with my_engine.connect() as conn:
         select_playlists = text("""
