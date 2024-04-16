@@ -254,6 +254,7 @@ if __name__ == '__main__':
     # song_panda.to_csv('smule_panda.csv', index=False)
 
     user_playlists = playlistify.get_user_playlists()
-    user_playlists.to_csv('playlistify/static/user_playlists.csv', index=False)
+    print(user_playlists)
+    # user_playlists.to_csv('playlistify/static/user_playlists.csv', index=False)
 
     # playlistify.get_spotipy_playlist('https://open.spotify.com/playlist/6B68YiiaqNNQRQpNuDgPJA?si=b3ec1829ef1645c8')

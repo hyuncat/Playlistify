@@ -269,6 +269,26 @@ def search_results():
     if request.method == 'GET':
         search_term = request.args.get('query')
         search_type = request.args.get('search_type')
+
+        if search_type == 'genre':
+            with my_engine.connect() as conn:
+                search_query = text("""
+                    SELECT DISTINCT Users.name, Playlist.playlist_id, Playlist.title
+                    FROM HasPlaylist
+                    INNER JOIN Users ON HasPlaylist.user_id = Users.user_id
+                    INNER JOIN Playlist ON HasPlaylist.playlist_id = Playlist.playlist_id
+                    INNER JOIN PlaylistSong ON Playlist.playlist_id = PlaylistSong.playlist_id
+                    INNER JOIN Song ON PlaylistSong.song_id = Song.song_id
+                    WHERE Song.genres @> ARRAY[:query]
+                """)
+                params = {'query': query}
+                cursor = conn.execute(search_query, params)
+                search_results = []
+                for result in cursor:
+                    search_results.append(result[0:3])
+                search_results = pd.DataFrame(search_results, columns=['user_name', 'playlist_id', 'title'])
+            return render_template('search_results.html', search_results=search_results, query=search_term, search_type='genre')
+
         with my_engine.connect() as conn:
             if search_type == 'playlist':
                 search_query = text("""
@@ -306,3 +326,47 @@ def search_results():
                 search_results.append(result[0:3])
             search_results = pd.DataFrame(search_results, columns=['user_name', 'playlist_id', 'title'])
             return render_template('search_results.html', search_results=search_results, query=search_term, search_type=search_type)
+
+
+@main.route('/autocomplete_genres', methods=['GET'])
+def autocomplete_genres():
+    query = request.args.get('term')  # Get the query string from the request
+    if query:
+        # Query the database for genres matching the input
+        with my_engine.connect() as conn:
+            genres_query = text("""
+                SELECT DISTINCT genre
+                FROM (
+                    SELECT unnest(genres) AS genre
+                    FROM Song
+                ) AS subquery
+                WHERE genre ILIKE :query_prefix  -- Case-insensitive match for genres starting with the input
+                LIMIT 10  -- Limit the number of results to 10
+            """)
+            cursor = conn.execute(genres_query, {'query_prefix': f'{query}%'})
+            genres = [row[0] for row in cursor.fetchall()]  # Extract genres from query result
+        # print(genres)
+        return jsonify(genres=genres)  # Return genres as JSON response
+    else:
+        return jsonify(genres=[])  # Return an empty list if no query is provided
+
+
+@main.route('/search_genres/<query>')
+def search_genres(query):
+    with my_engine.connect() as conn:
+        search_query = text("""
+            SELECT DISTINCT Users.name, Playlist.playlist_id, Playlist.title
+            FROM HasPlaylist
+            INNER JOIN Users ON HasPlaylist.user_id = Users.user_id
+            INNER JOIN Playlist ON HasPlaylist.playlist_id = Playlist.playlist_id
+            INNER JOIN PlaylistSong ON Playlist.playlist_id = PlaylistSong.playlist_id
+            INNER JOIN Song ON PlaylistSong.song_id = Song.song_id
+            WHERE Song.genres @> ARRAY[:query]
+        """)
+        params = {'query': query}
+        cursor = conn.execute(search_query, params)
+        search_results = []
+        for result in cursor:
+            search_results.append(result[0:3])
+        search_results = pd.DataFrame(search_results, columns=['user_name', 'playlist_id', 'title'])
+    return render_template('search_results.html', search_results=search_results, query=query, search_type='genre')
