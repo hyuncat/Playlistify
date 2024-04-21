@@ -3,18 +3,19 @@
 {% block content %}
 <div class="container text-center">
   <div class="row justify-content-center align-self-center mt-4">
-    <h1>Upload playlist link</h1>
+    <h1 style="padding-top: 15%;">Playlistify</h1>
+  </div>
+  <div class="row justify-content-center align-self-center mt-2">
+    <p>Paste a link to any Spotify playlist to analyze it!</p>
   </div>
   <div class="row">
     <form class="row g-3" method="POST" action="{{ url_for('main.redirect_playlist') }}">
-      <div class="col-12">
-        <input type="text" name="playlist_link" placeholder="Paste link here..." required>
+      <div class="col-12 d-flex justify-content-center">
+        <input type="text" class="form-control" style="width: 50%;" name="playlist_link" placeholder="Paste link here..." required>
       </div>
-      <div class="col-12">
+      <div class="col-12 mb-4">
         <button type="submit" class="btn btn-primary">Analyze</button>
     </form>
   </div>
 </div>
-
-
 {% endblock %}

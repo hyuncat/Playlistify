@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, g, request, redirect, url_for, session, jsonify, abort
 import pandas as pd
-import os, json
+import os, json, ast
 import pickle, zlib
 import requests
 import base64
@@ -165,8 +165,8 @@ def post_playlist():
             # Insert Song
             for _, row in song_data.iterrows():
                 insert_song = text("""
-                    INSERT INTO Song (song_id, title, features, popularity, genres)
-                    VALUES (:song_id, :title, :features, :popularity, ARRAY[:genres]) 
+                    INSERT INTO Song (song_id, title, features, popularity, genres, album_url)
+                    VALUES (:song_id, :title, :features, :popularity, ARRAY[:genres], :album_url) 
                     ON CONFLICT (song_id) DO NOTHING
                 """)
                 params = {
@@ -177,7 +177,8 @@ def post_playlist():
                                 f"{row['music_mode']}, {row['speechiness']}, {row['tempo']}, {row['time_signature']}, "
                                 f"{row['valence']})",
                     'popularity': row['popularity'],
-                    'genres': row['genres']
+                    'genres': row['genres'],
+                    'album_url': row['album_url']
                 }
                 conn.execute(insert_song, params)
                 conn.commit()
@@ -244,25 +245,167 @@ def post_playlist():
 
 @main.route('/browse')
 def browse():
-    with my_engine.connect() as conn:
-        all_playlists = text("""
-            SELECT playlist.title, playlist.playlist_id, users.name
-            FROM HasPlaylist
-            JOIN playlist ON HasPlaylist.playlist_id = playlist.playlist_id
-            JOIN users ON HasPlaylist.user_id = users.user_id
-        """)
-        cursor = conn.execute(all_playlists)
-        uploaded_playlists = []
-        for result in cursor:
-            uploaded_playlists.append(result[0:3])
-            print(result)
-        uploaded_playlists = pd.DataFrame(uploaded_playlists, columns=['title', 'playlist_id', 'user_name'])
-    return render_template('browse.html', all_playlists=uploaded_playlists)
+    return render_template('browse.html', playlists=None, songs=None, query=None)
 
 
 @main.route('/search')
 def search():
     return render_template('search.html')
+
+# new to part 4
+@main.route('/filter_genres', methods=['GET'])
+def filter_genres():
+    search_results = []
+    song_search_results = []
+    genres = []
+    with my_engine.connect() as conn:
+        if (request.args.get('genre_filter[]') is not None):
+            genres = request.args.getlist('genre_filter[]')
+            search_query = text("""
+                SELECT DISTINCT Users.name, Users.image_url, Playlist.playlist_id, Playlist.image_url, Playlist.title, Playlist.description,
+                (
+                    SELECT ARRAY_AGG(genre)
+                    FROM (
+                        SELECT genre
+                        FROM (
+                            SELECT genre
+                            FROM Song
+                            INNER JOIN PlaylistSong ON Song.song_id = PlaylistSong.song_id
+                            CROSS JOIN UNNEST(Song.genres) as genre
+                            WHERE PlaylistSong.playlist_id = Playlist.playlist_id
+                            AND genre = ANY(:genres)
+                        ) AS matching_genres
+                        UNION
+                        SELECT genre
+                        FROM (
+                            SELECT genre, COUNT(*) as count
+                            FROM Song
+                            INNER JOIN PlaylistSong ON Song.song_id = PlaylistSong.song_id
+                            CROSS JOIN UNNEST(Song.genres) as genre
+                            WHERE PlaylistSong.playlist_id = Playlist.playlist_id
+                            AND genre IS NOT NULL
+                            GROUP BY genre
+                            ORDER BY count DESC
+                            LIMIT 3
+                        ) AS top_genres
+                    ) AS union_subquery
+                ) AS genres
+                FROM HasPlaylist
+                INNER JOIN Users ON HasPlaylist.user_id = Users.user_id
+                INNER JOIN Playlist ON HasPlaylist.playlist_id = Playlist.playlist_id
+                INNER JOIN PlaylistSong ON Playlist.playlist_id = PlaylistSong.playlist_id
+                INNER JOIN Song ON Song.song_id = PlaylistSong.song_id
+                CROSS JOIN UNNEST(Song.genres) as genre
+                WHERE genre = ANY(:genres)
+            """)
+            params = {'genres': genres}
+            cursor = conn.execute(search_query, params)
+            for result in cursor:
+                search_results.append(result)
+            
+            song_search_query = text("""
+                SELECT Song.title, Song.album_url, ARRAY_AGG(Artist.name) as artists, Song.genres, PlaylistSong.playlist_id, Users.name
+                FROM Song
+                INNER JOIN SongArtist ON Song.song_id = SongArtist.song_id
+                INNER JOIN Artist ON SongArtist.artist_id = Artist.artist_id
+                INNER JOIN PlaylistSong ON Song.song_id = PlaylistSong.song_id
+                INNER JOIN HasPlaylist ON HasPlaylist.playlist_id = PlaylistSong.playlist_id
+                INNER JOIN Users ON HasPlaylist.user_id = Users.user_id
+                CROSS JOIN UNNEST(Song.genres) as genre
+                WHERE genre = ANY(:genres)
+                GROUP BY Song.title, Song.album_url, Song.genres, PlaylistSong.playlist_id, Users.name
+            """)
+            params = {'genres': genres}
+            cursor = conn.execute(song_search_query, params)
+            for result in cursor:
+                song_search_results.append(result[0:6])
+        else:
+            search_query = text("""
+                SELECT DISTINCT Users.name, Users.image_url, Playlist.playlist_id, Playlist.image_url, Playlist.title, Playlist.description,
+                (
+                    SELECT ARRAY_AGG(genre)
+                    FROM (
+                        SELECT UNNEST(genres) as genre, COUNT(*) as count
+                        FROM Song
+                        INNER JOIN PlaylistSong ON Song.song_id = PlaylistSong.song_id
+                        WHERE PlaylistSong.playlist_id = Playlist.playlist_id
+                        GROUP BY genre
+                        ORDER BY count DESC
+                        LIMIT 3
+                    ) AS subquery
+                ) AS genres
+                FROM HasPlaylist
+                INNER JOIN Users ON HasPlaylist.user_id = Users.user_id
+                INNER JOIN Playlist ON HasPlaylist.playlist_id = Playlist.playlist_id
+                INNER JOIN PlaylistSong ON Playlist.playlist_id = PlaylistSong.playlist_id
+                INNER JOIN (
+                    SELECT song_id, UNNEST(genres) as genre
+                    FROM Song
+                ) AS Song ON PlaylistSong.song_id = Song.song_id
+            """)
+            cursor = conn.execute(search_query)
+            for result in cursor:
+                search_results.append(result)
+            
+            song_search_query = text("""
+                WITH song_counts AS (
+                    SELECT song_id, COUNT(*) as playlist_count
+                    FROM PlaylistSong
+                    GROUP BY song_id
+                ),
+                playlist_users AS (
+                    SELECT playlist_id, user_id
+                    FROM HasPlaylist
+                )
+                SELECT Song.title, Song.album_url, ARRAY_AGG(Artist.name) as artists, Song.genres, Users.name, song_counts.playlist_count
+                FROM Song
+                INNER JOIN song_counts ON Song.song_id = song_counts.song_id
+                INNER JOIN SongArtist ON Song.song_id = SongArtist.song_id
+                INNER JOIN Artist ON SongArtist.artist_id = Artist.artist_id
+                INNER JOIN PlaylistSong ON Song.song_id = PlaylistSong.song_id
+                INNER JOIN playlist_users ON PlaylistSong.playlist_id = playlist_users.playlist_id
+                INNER JOIN Users ON playlist_users.user_id = Users.user_id
+                GROUP BY Song.title, Song.album_url, Song.genres, Users.name, song_counts.playlist_count
+                ORDER BY song_counts.playlist_count DESC
+                LIMIT 10
+            """)
+            cursor = conn.execute(song_search_query)
+            for result in cursor:
+                song_search_results.append(result[0:6])
+
+    # Process playlist search results
+    if search_results:
+        search_results = pd.DataFrame(search_results, columns=['user_name', 'user_img', 'playlist_id', 'playlist_img', 'playlist_title', 'playlist_desc', 'genres'])
+
+    # Turn each row into array of tuples (genre, is_selected)
+    search_results["genres"] = search_results["genres"].apply(lambda x: [(genre, genre in genres) for genre in x])
+    search_results["genres"] = search_results["genres"].apply(lambda genres: [genre for genre in genres if genre[0] is not None])
+
+    # Process song search results
+    song_search_results = pd.DataFrame(song_search_results, columns=['song_title', 'album_url', 'artists', 'genres', 'playlist_id', 'user_name'])
+
+    # If genres are stored as strings, convert them back to lists
+    song_search_results["genres"] = song_search_results["genres"].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
+
+    # Help unpack genres from nested lists, NoneType errors, and duplicates
+    def process_genres(x):
+        if x is None:
+            return []
+        else:
+            result = []
+            for sublist in x:
+                if sublist is not None:
+                    for item in sublist:
+                        if item is not None:
+                            result.append(item)
+            return list(set(result)) # remove duplicates
+
+    song_search_results["genres"] = song_search_results["genres"].apply(process_genres)
+
+    # Turn each genre into a tuple (genre, is_selected)
+    song_search_results["genres"] = song_search_results["genres"].apply(lambda x: [(genre, genre in genres) for genre in x])
+
+    return render_template('browse.html', playlists=search_results, songs=song_search_results, query=genres)
 
 @main.route('/search_results', methods=['GET'])
 def search_results():
@@ -270,7 +413,7 @@ def search_results():
         search_term = request.args.get('query')
         search_type = request.args.get('search_type')
 
-        if search_type == 'genre':
+        if search_type == 'genre_filter':
             with my_engine.connect() as conn:
                 search_query = text("""
                     SELECT DISTINCT Users.name, Playlist.playlist_id, Playlist.title
@@ -279,9 +422,9 @@ def search_results():
                     INNER JOIN Playlist ON HasPlaylist.playlist_id = Playlist.playlist_id
                     INNER JOIN PlaylistSong ON Playlist.playlist_id = PlaylistSong.playlist_id
                     INNER JOIN Song ON PlaylistSong.song_id = Song.song_id
-                    WHERE Song.genres @> ARRAY[:query]
+                    WHERE :query = ANY(Song.genres)
                 """)
-                params = {'query': query}
+                params = {'query': search_term}
                 cursor = conn.execute(search_query, params)
                 search_results = []
                 for result in cursor:
@@ -348,9 +491,24 @@ def autocomplete_genres():
         # print(genres)
         return jsonify(genres=genres)  # Return genres as JSON response
     else:
-        return jsonify(genres=[])  # Return an empty list if no query is provided
+        # Query the database for the top 10 most frequent genres
+        with my_engine.connect() as conn:
+            genres_query = text("""
+                SELECT genre, COUNT(*) AS count
+                FROM (
+                    SELECT unnest(genres) AS genre
+                    FROM Song
+                ) AS subquery
+                GROUP BY genre
+                ORDER BY count DESC
+                LIMIT 10  -- Limit the number of results to 10
+            """)
+            cursor = conn.execute(genres_query)
+            genres = [row[0] for row in cursor.fetchall()]  # Extract genres from query result
+        return jsonify(genres=genres)  # Return genres as JSON response
 
 
+# moot
 @main.route('/search_genres/<query>')
 def search_genres(query):
     with my_engine.connect() as conn:
@@ -370,3 +528,31 @@ def search_genres(query):
             search_results.append(result[0:3])
         search_results = pd.DataFrame(search_results, columns=['user_name', 'playlist_id', 'title'])
     return render_template('search_results.html', search_results=search_results, query=query, search_type='genre')
+
+@main.route('/test')
+def test():
+    return render_template('test.html')
+
+# not yet working... many considerations.........
+@main.route('/filter_features')
+def search_features():
+    feature_to_search = request.args.get('feature')
+    sort_order = 'DESC' if request.args.get('desc_switch') == 'on' else 'ASC'
+
+    with my_engine.connect() as conn:
+        search_query = text(f"""
+            SELECT Users.name, Playlist.playlist_id, Playlist.title, AVG(Song.{feature_to_search}) as avg_feature
+            FROM HasPlaylist
+            INNER JOIN Users ON HasPlaylist.user_id = Users.user_id
+            INNER JOIN Playlist ON HasPlaylist.playlist_id = Playlist.playlist_id
+            INNER JOIN PlaylistSong ON Playlist.playlist_id = PlaylistSong.playlist_id
+            INNER JOIN Song ON PlaylistSong.song_id = Song.song_id
+            GROUP BY Playlist.playlist_id, Users.name, Playlist.title
+            ORDER BY avg_feature {sort_order}
+            LIMIT 10
+        """)
+        cursor = conn.execute(search_query)
+        search_results = []
+        for result in cursor:
+            search_results.append(result)
+        search_results = pd.DataFrame(search_results, columns=['user_name', 'playlist_id', 'title', 'avg_feature'])

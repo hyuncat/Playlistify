@@ -164,13 +164,13 @@ def view_playlist(playlist_id):
         playlist_data = cursor.fetchone()
 
         select_songs = text("""
-            SELECT song.song_id, song.title, song.popularity, 
+            SELECT song.song_id, song.title, song.popularity,
                 (song.features).danceability, (song.features).energy, (song.features).music_key, 
                 (song.features).loudness, (song.features).music_mode, (song.features).speechiness, 
                 (song.features).acousticness, (song.features).instrumentalness, 
                 (song.features).liveness, (song.features).valence, (song.features).tempo, 
                 (song.features).duration_ms, (song.features).time_signature, song.genres,
-                array_agg(artist.name) AS artist_names
+                song.album_url, array_agg(artist.name) AS artist_names
             FROM song
             INNER JOIN SongArtist ON song.song_id = SongArtist.song_id
             INNER JOIN artist ON SongArtist.artist_id = artist.artist_id
@@ -184,12 +184,12 @@ def view_playlist(playlist_id):
         cursor = conn.execute(select_songs, params)
         song_rows = []
         for result in cursor:
-            song_rows.append(result[0:18])
+            song_rows.append(result[0:19])
         
         song_colnames = [
             'song_id', 'title', 'popularity', 'danceability', 'energy', 'music_key',
             'loudness', 'music_mode', 'speechiness', 'acousticness', 'instrumentalness',
-            'liveness', 'valence', 'tempo', 'duration_ms', 'time_signature', 'genres', 'artist_names'
+            'liveness', 'valence', 'tempo', 'duration_ms', 'time_signature', 'genres', 'album_url', 'artist_names'
         ]
         sql_reconstructed_song_panda = pd.DataFrame(song_rows, columns=song_colnames)
 

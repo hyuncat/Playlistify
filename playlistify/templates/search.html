@@ -18,7 +18,7 @@
                 <div class="row mt-4">
                     <div class="col">
                         <!-- Add ID to input field -->
-                        <input type="text" id="genres" name="genres" required>
+                        <input type="text" id="query" name="query" required>
                     </div>
                     <div class="col">
                         <select id="search_type" name="search_type" required>
@@ -45,7 +45,7 @@
         $('#search_type').change(function() {
             var selectedOption = $(this).val();
             if (selectedOption === 'genre') {
-                $('#genres').autocomplete({
+                $('#query').autocomplete({
                     source: function(request, response) {
                         $.ajax({
                             url: '/autocomplete_genres',
@@ -59,11 +59,11 @@
                     minLength: 1, // Minimum characters before autocomplete activates
                     select: function(event, ui) {
                         console.log('Selected:', ui.item.value);
-                        $('#genres').val(ui.item.value);
+                        $('#query').val(ui.item.value);
                     }
                 });
             } else {
-                $('#genres').autocomplete('destroy'); // Destroy autocomplete if search type is not genre
+                $('#query').autocomplete('destroy'); // Destroy autocomplete if search type is not genre
             }
         });
     });

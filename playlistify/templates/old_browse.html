@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!--Styling and JS for datatable-->
+<!-- <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.1/css/bootstrap.min.css"> -->
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.1/css/dataTables.bootstrap5.min.css">
+<script type="text/javascript" language="javascript" src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script type="text/javascript" language="javascript" 
+src="https://cdn.datatables.net/1.11.1/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" language="javascript" src="https://cdn.datatables.net/1.11.1/js/dataTables.bootstrap5.min.js"></script>
+
+<script type="text/javascript" class="init">
+  $(document).ready(function() {
+    $('#browse_playlists').DataTable(
+      {
+            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+            "pageLength": 25
+        }
+    );
+  });
+</script>
+
+
+<div class="container text-center">
+    <div class="row justify-content-center align-self-center mt-4">
+      <h1>Browse Playlists</h1>
+    </div>
+    <div class="row justify-content-center align-self-center mt-4">
+      <p>Browse, search, and rate other people's playlists!</p>
+    </div>
+    <div class="row justify-content-center align-self-center mt-4">
+      <div style="background-color: rgb(247, 247, 247); padding: 20px; border-radius: 5px;">
+        <form id="filterForm" style="text-align: left;">
+          <h4>Filter by</h4>
+          <fieldset class="form-group">
+            <div class="row">
+              <legend class="col-form-label col-sm-12 pt-0">Features</legend>
+            </div>
+            <div class="row">
+              <div class="col-sm-12">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="feature" id="popRadio" value="popularity">
+                  <label class="form-check-label" for="popRadio">Obscurity</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="feature" id="danceRadio" value="danceability">
+                  <label class="form-check-label" for="danceRadio">Danceability</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="feature" id="energyRadio" value="energy">
+                  <label class="form-check-label" for="energyRadio">Energy</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="feature" id="loudRadio" value="loudness">
+                  <label class="form-check-label" for="loudRadio">Loudness</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="feature" id="acousticRadio" value="acousticness">
+                  <label class="form-check-label" for="acousticRadio">Acousticness</label>
+                </div>
+              </div>
+            </div>
+          </fieldset>
+          <fieldset class="form-group">
+            <div class="row mt-2">
+              <select class="form-select justify-content-start align-self-start mt-2 mb-3" style="width: auto; margin-left: 10px;" aria-label="Result order">
+                <option selected>Order results by</option>
+                <option value="1">Highest to lowest</option>
+                <option value="2">Lowest to highest</option>
+              </select>
+              <select class="form-select justify-content-start align-self-start mt-2 mb-3" style="width: auto; margin-left: 10px;" aria-label="Default select example">
+                <option selected>Result type</option>
+                <option value="1">Playlists</option>
+                <option value="2">Songs</option>
+                <option value="2">Artists</option>
+              </select>
+            </div>
+          </fieldset>
+          <div class="row justify-content-start align-self-start mt-2 mb-2">
+            <button type="button" class="btn btn-secondary" id="filterButton" style="width: auto; margin-left: 10px;">Filter</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="row justify-content-center align-self-center mt-4">
+      <h3>Uploaded Playlists</h3>
+      <!-- <table class="table table-hover table-responsive"> -->
+      <table id="browse_playlists" class="table table-hover table-responsive">
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Playlist</th>
+            <th scope="col">Creator</th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for idx, row in all_playlists.iterrows() %}
+          <tr>
+            <th scope="row">{{idx+1}}</th>
+            <td scope="row">{{row['title']}}</th>
+            <td scope="row">{{row['user_name']}}</th>
+            <td><a href="/view_playlist/{{ row['playlist_id'] }}" class="btn btn-light">View</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+{% endblock %}

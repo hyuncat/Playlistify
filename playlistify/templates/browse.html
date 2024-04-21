@@ -1,57 +1,283 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<!--Styling and JS for datatable-->
-<!-- <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.1/css/bootstrap.min.css"> -->
-<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.1/css/dataTables.bootstrap5.min.css">
+<link
+  href="https://cdnjs.cloudflare.com/ajax/libs/jquery-ui-bootstrap/0.5pre/css/custom-theme/jquery-ui-1.10.0.custom.css"
+  rel="stylesheet" />
 <script type="text/javascript" language="javascript" src="https://code.jquery.com/jquery-3.5.1.js"></script>
-<script type="text/javascript" language="javascript" 
-src="https://cdn.datatables.net/1.11.1/js/jquery.dataTables.min.js"></script>
-<script type="text/javascript" language="javascript" src="https://cdn.datatables.net/1.11.1/js/dataTables.bootstrap5.min.js"></script>
+<script type="text/javascript" language="javascript" src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
 
-<script type="text/javascript" class="init">
-  $(document).ready(function() {
-    $('#browse_playlists').DataTable(
-      {
-            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
-            "pageLength": 25
-        }
-    );
-  });
-</script>
+<!-- Select2 -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-
-<div class="container text-center">
-    <div class="row justify-content-center align-self-center mt-4">
-      <h1>Browse Playlists</h1>
+<div class="row px-2">
+  <div class="col-4 px-4 py-4">
+    <!-- Accordion Item #1 -->
+    <div class="container px-1 mb-3" style="background-color: #F8F9FA; border-radius: 5px;">
+      <div class="accordion accordion-flush" id="accordionFlushExample1">
+        <div class="accordion-item" style="background-color: #F8F9FA;">
+          <h2 class="accordion-header">
+            <button class="accordion-button" style="background-color: #F8F9FA;" type="button" data-bs-toggle="collapse"
+              data-bs-target="#flush-collapseOne" aria-expanded="true" aria-controls="flush-collapseOne">
+              Genres
+            </button>
+          </h2>
+          <div id="flush-collapseOne" class="accordion-collapse collapse show">
+            <div class="accordion-body">
+              <form action="/filter_genres" method="get">
+                <div class="form-group">
+                  <div class="row">
+                    <div class="col">
+                      <label for="genre_filter" class="form-label py-1">Search for genres:</label>
+                      <select class="form-control select2" id="genre_filter" name="genre_filter[]" multiple="multiple" style="width: 100% !important;">
+                        <!-- Options will be populated by AJAX -->
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group justify-content-center align-self-center mt-2">
+                  <button type="submit" id="genre_filter_btn" class="btn btn-secondary">Search</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="row justify-content-center align-self-center mt-4">
-      <p>Browse, search, and rate other people's playlists!</p>
-    </div>
-    <div class="row justify-content-center align-self-center mt-4">
-      <h3>Uploaded Playlists</h3>
-      <!-- <table class="table table-hover table-responsive"> -->
-      <table id="browse_playlists" class="table table-hover table-responsive">
-        <thead>
-          <tr>
-            <th scope="col">#</th>
-            <th scope="col">Playlist</th>
-            <th scope="col">Creator</th>
-            <th scope="col"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for idx, row in all_playlists.iterrows() %}
-          <tr>
-            <th scope="row">{{idx+1}}</th>
-            <td scope="row">{{row['title']}}</th>
-            <td scope="row">{{row['user_name']}}</th>
-            <td><a href="/view_playlist/{{ row['playlist_id'] }}" class="btn btn-light">View</a></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <!-- Accordion Item #2 -->
+    <div class="container px-1 mb-3" style="background-color: #F8F9FA; border-radius: 5px;">
+      <div class="accordion accordion-flush" id="accordionFlushExample2">
+        <div class="accordion-item" style="background-color: #F8F9FA;">
+          <h2 class="accordion-header">
+            <button class="accordion-button" style="background-color: #F8F9FA;" type="button" data-bs-toggle="collapse"
+              data-bs-target="#flush-collapseTwo" aria-expanded="true" aria-controls="flush-collapseTwo">
+              Features
+            </button>
+          </h2>
+          <div id="flush-collapseTwo" class="accordion-collapse collapse show">
+            <div class="accordion-body">
+              <form method="GET" action="#" style="text-align: left;">
+                <fieldset class="form-group">
+                  <div class="row">
+                    <legend class="col-form-label col-sm-12 pt-0">Song features to sort by:</legend>
+                  </div>
+                  <div class="row">
+                    <div class="col-sm-12">
+                      <select class="form-select mb-1" name="feature" aria-label="Select features to sort">
+                        <option value="" disabled>Sort by</option>
+                        <option value="0">None</option>
+                        <option value="1" disabled>Popularity</option>
+                        <option value="2" disabled>Danceability</option>
+                        <option value="3" disabled>Energy</option>
+                        <option value="4" disabled>Loudness</option>
+                        <option value="5" disabled>Acousticness</option>
+                      </select>
+                      <!-- <div class="form-check">
+                        <input class="form-check-input" type="radio" name="feature" id="popRadio" value="popularity">
+                        <label class="form-check-label" for="popRadio">Obscurity</label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="radio" name="feature" id="danceRadio"
+                          value="danceability">
+                        <label class="form-check-label" for="danceRadio">Danceability</label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="radio" name="feature" id="energyRadio" value="energy">
+                        <label class="form-check-label" for="energyRadio">Energy</label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="radio" name="feature" id="loudRadio" value="loudness">
+                        <label class="form-check-label" for="loudRadio">Loudness</label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="radio" name="feature" id="acousticRadio"
+                          value="acousticness">
+                        <label class="form-check-label" for="acousticRadio">Acousticness</label>
+                      </div> -->
+                    </div>
+                  </div>
+                </fieldset>
+                <fieldset class="form-group">
+                  <div class="row mt-2" style="padding-left: 10px;">
+                    <div class="form-check form-switch pl-2">
+                      <input class="form-check-input" type="checkbox" role="switch" id="desc_switch" name="desc_switch" checked>
+                      <label class="form-check-label" for="desc_switch">Sort descending</label>
+                    </div>
+                  </div>
+                </fieldset>
+                <div class="row justify-content-start align-self-start mt-2 mb-2">
+                  <button type="submit" class="btn btn-secondary" id="filterButton"
+                    style="width: auto; margin-left: 10px;">Filter</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
+  <div class="col-8 px-4 py-4">
+    <div class="row">
+      <h1>Browse</h1>
+      <p>Browse, search, and rate other people's playlists!</p>
+      <hr>
+    </div>
+    <div class="row">
+      <div class="col-6">
+        <h3>Playlists</h3>
+        <p>Searching for: "{{query}}"</p>
+      </div>
+      <!-- <form action="/filter_genres" method="get" class="col d-flex justify-content-end">
+        <div class="form-group row">
+          <div class="col-auto">
+            <select class="form-select mb-3 ml-auto" style="margin-left: 10px;" aria-label="Default select example">
+              <option value="" disabled>Order results by</option>
+              <option value="1">Highest to lowest</option>
+              <option value="2">Lowest to highest</option>
+            </select>
+          </div>
+          <div class="col-auto">
+            <select class="form-select mb-3 ml-auto" style="margin-left: 10px;" aria-label="Default select example">
+              <option value="" disabled>Result type</option>
+              <option value="1">All</option>
+              <option value="2">Playlists</option>
+              <option value="3">Songs</option>
+              <option value="4">Artists</option>
+            </select>
+          </div>
+        </div>
+      </form> -->
+    </div>
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+      {% if playlists is none %}
+        <script>
+            window.location.href = "{{ url_for('main.filter_genres') }}";
+        </script>
+      {% else %}
+        {% for idx, playlist in playlists.iterrows() %}
+          <div class="col">
+            <div class="card h-100">
+              <div class="card-header d-flex align-items-center">
+                <img src="{{ playlist['user_img'] }}" alt="img"
+                  style="border-radius: 50%; max-width: 20%; max-height: 90%; margin-left: -5px; border: 1px solid #bcbfc2;">
+                <span class="px-2">{{ playlist['user_name'] }}</span>
+              </div>
+              <img src="{{ playlist['playlist_img'] }}"
+                class="card-img-top" alt="...">
+              <div class="card-body">
+                <h5 class="card-title m-0">
+                  <a href="{{url_for('login.view_playlist', playlist_id=playlist['playlist_id'])}}" class="text-dark">{{ playlist.playlist_title }}</a>
+                </h5>
+                <p class="card-text">{{ playlist['playlist_desc'] }}</p>
+                <!-- <div class="mt-2">
+                  {% if playlist['genres'] %}
+                      {% for genre in playlist['genres'] %}
+                          <span class="badge {{ 'text-bg-primary' if genre[1] else 'text-bg-light-grey' }}">{{ genre[0] }}</span>
+                      {% endfor %}
+                  {% endif %}
+                </div> -->
+                {% for genre, is_selected in playlist['genres'] %}
+                  <span class="badge {{ 'text-bg-primary' if is_selected else 'text-bg-light' }}">{{ genre }}</span>
+                {% endfor %}
+                <!-- <div class="mt-2">
+                  {{ playlist['genres'] }}
+                </div> -->
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+    <hr>
+    <div class="row">
+      <h3>Songs</h3>
+      <p>Searching for: "{{query}}"</p>
+    </div>
+    {% if songs is none %}
+        <script>
+            window.location.href = "{{ url_for('main.filter_genres') }}";
+        </script>
+      {% else %}
+        {% for idx, song in songs.iterrows() %}
+          <div class="row my-2">
+            <div class="card">
+              <div class="card-body px-2 py-2">
+                <div class="row align-items-center pr-2">
+                  <div class="col-sm-2" style="min-width: 70px;">
+                    <img src="{{song['album_url']}}" class="rounded float-left" style="height: 90%; width: 70px" alt="...">
+                  </div>
+                  <div class="col-sm-8 pl-2">
+                    <h5 class="card-title m-0">{{song['song_title']}}</h5> <!-- m-0 removes the default margin -->
+                    <h6 class="card-subtitle mb-2 text-muted m-0">{{ song['artists']|join(', ') }}</h6>
+                    <div class="mt-2">
+                      {% for genre, is_selected in song['genres'] %}
+                        <span class="badge {{ 'text-bg-primary' if is_selected else 'text-bg-light' }}">{{ genre }}</span>
+                      {% endfor %}
+                    </div>
+                  </div>
+                  <!-- <div class="col-sm-2" style="text-align: right;">
+                    <a href="#"><p class="font-weight-bold mb-1">grand forks</p></a>
+                    <p class="card-subtitle mb-2 text-muted mt-0">sarah</p>
+                  </div> -->
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% endif %}
+  </div>
 
-{% endblock %}
+  <!-- Include jQuery UI Autocomplete JS -->
+  <!-- <script>
+    $(function () {
+      $('#genre_filter').autocomplete({
+        source: function (request, response) {
+          $.ajax({
+            url: '/autocomplete_genres',
+            dataType: 'json',
+            data: { term: request.term },
+            success: function (data) {
+              response(data.genres);
+            }
+          });
+        },
+        minLength: 1, // Minimum characters before autocomplete activates
+        select: function (event, ui) {
+          console.log('Selected:', ui.item.value);
+          $('#genre_filter').val(ui.item.value);
+        }
+      });
+    });
+  </script> -->
+  <script>
+    $(document).ready(function() {
+      $('#genre_filter').select2({
+        ajax: {
+          url: '/autocomplete_genres',
+          dataType: 'json',
+          delay: 250,
+          data: function (params) {
+            return {
+              term: params.term // search term
+            };
+          },
+          processResults: function (data) {
+            return {
+              results: $.map(data.genres, function (item) {
+                return {
+                  text: item,
+                  id: item
+                }
+              })
+            };
+          },
+          cache: true
+        },
+        minimumInputLength: 0,
+        width: 'resolve'
+      });
+    });
+  </script>
+
+  {% endblock %}

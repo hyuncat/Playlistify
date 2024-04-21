@@ -15,7 +15,26 @@ src="https://cdn.datatables.net/1.11.1/js/jquery.dataTables.min.js"></script>
             "pageLength": -1
         }
     );
+    $('.analyzeButton').on('click', function(e) {
+    e.preventDefault();  // Prevent the link from being followed
+
+    $('#analyzeModal').modal('show');  // Show the modal with the spinner
+
+    var playlistId = $(this).data('playlist-id');  // Get the playlist_id from the data attribute
+
+    $.ajax({
+      type: 'GET',
+      url: $(this).attr('href'),
+      success: function(response) {
+        // Handle the response from the server
+        window.location.href = '/analyze_playlist/' + playlistId;  // Redirect to the analyze page
+      },
+      complete: function() {
+        $('#analyzeModal').modal('hide');  // Hide the modal with the spinner
+      }
+    });
   });
+});
 </script>
 
 <div class="container mt-4">
@@ -37,11 +56,26 @@ src="https://cdn.datatables.net/1.11.1/js/jquery.dataTables.min.js"></script>
                 <td><img src="{{playlist['image_url']}}" alt="img" style="width: 90px; height: 90px;"></td>
                 <td>{{ playlist['name'] }}</td>
                 <td>{{ playlist['tracks'] }}</td>
-                <td><a href="/analyze_playlist/{{ playlist['playlist_id'] }}" class="btn btn-light">Analyze</a></td>
+                <td><a href="/analyze_playlist/{{ playlist['playlist_id'] }}" data-playlist-id="{{ playlist['playlist_id'] }}" class="btn btn-light analyzeButton">Analyze</a></td>
                 <!-- <td><a href="/analyze_playlist/{{ playlist.id }}" class="btn btn-primary">Analyze</a></td> -->
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+<div class="modal" tabindex="-1" id="analyzeModal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-body">
+          <div class="d-flex justify-content-center">
+            <div class="spinner-border" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+          <p class="text-center">Analyzing playlist...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
 {% endblock %}

@@ -30,6 +30,7 @@ src="https://cdn.datatables.net/1.11.1/js/jquery.dataTables.min.js"></script>
         <thead>
           <tr>
             <th scope="col">#</th>
+            <th scope="col">Img</th>
             <th scope="col">Track</th>
             <th scope="col">Artist</th>
             <th scope="col">Popularity</th>
@@ -53,6 +54,7 @@ src="https://cdn.datatables.net/1.11.1/js/jquery.dataTables.min.js"></script>
           {% for idx, song in song_data.iterrows() %}
           <tr>
             <th scope="row">{{idx+1}}</th>
+            <td><img src="{{song['album_url']}}" alt="img" style="width: 50px; height: 50px;"></td>
             <td>{{song['song_title']}}</td>
             <td>{{song['artists']}}</td>
             <td>{{song['popularity']}}</td>
@@ -76,12 +78,58 @@ src="https://cdn.datatables.net/1.11.1/js/jquery.dataTables.min.js"></script>
       </table>
     </div>
     {% if session['user_id'] and session['user_id'] == playlist_data['owner_id'] %}
-    <div class="row justify-content-center align-self-center mt-4 mb-4">
-      <div class="col-auto">
-        <a href="{{ url_for('main.post_playlist') }}" class="btn btn-primary">Post</a>
+      <div class="row justify-content-center align-self-center mt-4 mb-4">
+        <div class="col-auto">
+          <form id="postForm" action="{{ url_for('main.post_playlist') }}" method="post">
+            <button type="submit" class="btn btn-primary">Post</button>
+          </form>
+        </div>
       </div>
-    </div>
+      <div class="modal" tabindex="-1" id="spinnerModal">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-body">
+              <div class="d-flex justify-content-center">
+                <div class="spinner-border" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+              </div>
+              <p class="text-center">Posting to the database...</p> 
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal" tabindex="-1" id="successModal">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-body text-center">
+              <p>Success!</p>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
     {% endif %}
   </div>
+
+  <script>
+    $(document).ready(function() {
+      $('#postForm').on('submit', function(e) {
+        e.preventDefault();  // Prevent the form from being submitted normally
+  
+        $('#spinnerModal').modal('show');  // Show the modal with the spinner
+  
+        $.ajax({
+          type: 'POST',
+          url: $(this).attr('action'),
+          data: $(this).serialize(),
+          success: function(response) {
+            $('#spinnerModal').modal('hide');  // Hide the modal with the spinner
+            $('#successModal').modal('show');  // Show the success modal
+          }
+        });
+      });
+    });
+  </script>
 
 {% endblock %}

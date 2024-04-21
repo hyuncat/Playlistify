@@ -219,7 +219,8 @@ class SpotifyAnalyzer:
                 'tempo': song_data_json['tempo'],
                 'duration_ms': song_data_json['duration_ms'],
                 'time_signature': song_data_json['time_signature'],
-                'genres': genres if genres else None
+                'genres': genres if genres else None,
+                'album_url': track['track']['album']['images'][0]['url'] if track['track']['album']['images'] else None
             }
             
             song_df.append(song_row)
