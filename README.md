@@ -4,7 +4,7 @@
 
 - **Account:** ssh2198
 - **Database Host:** 35.212.75.104
-- **URL:** [http://34.139.227.109:8111/](http://34.139.227.109:8111/)
+- **URL:** [http://34.139.227.109:8111/](http://34.139.227.109:8111/) (Broken)
 
 ## Original Project Requirements
 I already satisfied 3 of the additions in my Part 3:
@@ -31,7 +31,7 @@ So, after checking with my project mentor I decided to expand on the search/brow
 
 # New additions for Part 4
 ## Genre autocomplete
-![Kapture 2024-04-21 at 02.57.35.gif](Part%204%20README%2049548b13c8864e84961d37aff63086c2/Kapture_2024-04-21_at_02.57.35.gif)
+<img src="Part%204%20README%2049548b13c8864e84961d37aff63086c2/Kapture_2024-04-21_at_02.57.35.gif" width="300"/>
 
 To help users discover genres they may not previously know about (permanent wave?) I implemented an search autocomplete function with JQuery which queries the database with each new character input.
 
@@ -100,7 +100,7 @@ I turned the results of the database query into JSON format, which allows me to 
 ## Genre search: Playlists
 Searching returns all playlists containing any of the specified genres!
 
-![Screenshot 2024-04-21 at 3.09.01 AM.png](Part%204%20README%2049548b13c8864e84961d37aff63086c2/Screenshot_2024-04-21_at_3.09.01_AM.png)
+<img src="Part%204%20README%2049548b13c8864e84961d37aff63086c2/Screenshot_2024-04-21_at_3.09.01_AM.png" width="800"/>
 
 The genres in bright blue reflect those genres which are present in the search query. The ones in light-grey are the non-matching, but most frequently occurring genres in the playlist. This way, users can get a sense of the overall ‘genre’ of the playlist, and discover new genres they may not have previously known about.
 
@@ -166,7 +166,8 @@ The second line of code is just to filter out cases in which the most common gen
 ## Genre search: Songs
 Below the returned playlists, we have a result showing the matching genres for a particular song, alongside the rest of its associated genres.
 
-![Screenshot 2024-04-21 at 4.30.27 AM.png](Part%204%20README%2049548b13c8864e84961d37aff63086c2/Screenshot_2024-04-21_at_4.30.27_AM.png)
+<img src="Part%204%20README%2049548b13c8864e84961d37aff63086c2/Screenshot_2024-04-21_at_4.30.27_AM.png" width="700"/>
+
 
 ### **routes.py: filter_genres()**
 It uses a similar logic to the playlist query, but it reflects an earlier attempt in which I tried to process the data without aggregating the genres into an array. 
@@ -217,9 +218,9 @@ Clearly, it was much easier to process the data when I aggregated and returned t
 ## Browse.html: Default behavior
 By default, `browse.html` just returns all playlists in the database, and the 10 songs which appear most frequently across all playlists.
 
-![Screenshot 2024-04-21 at 10.24.20 AM.png](Part%204%20README%2049548b13c8864e84961d37aff63086c2/Screenshot_2024-04-21_at_10.24.20_AM.png)
+<img src="Part%204%20README%2049548b13c8864e84961d37aff63086c2/Screenshot_2024-04-21_at_10.24.20_AM.png" width="500"/>
 
-![Screenshot 2024-04-21 at 10.07.45 AM.png](Part%204%20README%2049548b13c8864e84961d37aff63086c2/Screenshot_2024-04-21_at_10.07.45_AM.png)
+<img src="Part%204%20README%2049548b13c8864e84961d37aff63086c2/Screenshot_2024-04-21_at_10.07.45_AM.png" width="500"/>
 
 ### routes.py: filter_genres
 **Display all uploaded playlists**
